@@ -37,7 +37,7 @@ The heap variant is the `alloc` feature, which `compio` turns on.
 The broker runs over the [`rust-mqtt`](https://docs.rs/rust-mqtt) client, which keeps every field it receives in a heap buffer of its own, and the settings hold owned strings.
 `MqttBroker::new(config)` takes no state, and on a compio host `MqttBroker::compio` starts the runner on the core that connects the broker, so the host spawns nothing.
 A device that has a heap takes this variant too, with `alloc` and `embassy`.
-The [compio guide](../../guides/getting-started-compio.md#the-heap-variant) shows it.
+The [compio guide](../../guides/getting-started-compio.md) shows it.
 
 The features, all off by default: `embassy` adds the network of a device, `alloc` selects the heap variant, `compio` adds the network of a compio host and `MqttBroker::compio` (and `alloc`), and `testing` adds the in-process transport a [`TestApp`](../testing/index.md) connects.
 

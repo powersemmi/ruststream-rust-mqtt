@@ -25,7 +25,7 @@ cargo add embassy-executor embassy-net static_cell
 
 The `embassy` feature of the broker crate adds `EmbassyNetwork`, the runner's network over an embassy-net stack.
 The broker crate is the device variant until its `alloc` feature is on, and the framework follows: a feature of `ruststream` that needs a heap, such as `json`, turns the framework's `alloc` on, and the broker crate then asks for its own `alloc` feature as well.
-A device that has a heap takes the [heap variant](./getting-started-compio.md#the-heap-variant) the same way.
+A device that has a heap takes the [heap variant](./getting-started-compio.md) the same way.
 
 ## The handler and the app
 
