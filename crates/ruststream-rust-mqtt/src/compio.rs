@@ -65,17 +65,33 @@ impl Network for CompioNetwork {
         let stream = Rc::new(TcpStream::connect((host, port)).await?);
         stream.set_nodelay(true)?;
         let pipe = Rc::new(RefCell::new(Pipe::default()));
+        let outbox = Rc::new(RefCell::new(Outbox::default()));
         let reader = compio::runtime::spawn(read_into(Rc::clone(&stream), Rc::clone(&pipe)));
+        let writer = compio::runtime::spawn(write_from(stream, Rc::clone(&outbox)));
         Ok(CompioStream {
-            stream,
             pipe,
-            outgoing: Vec::new(),
+            outbox,
             _reader: reader,
+            _writer: writer,
         })
     }
 
     async fn sleep(duration: Duration) {
         compio::time::sleep(duration).await;
+    }
+
+    // The writing task hands the kernel what the client gathered after the client's flush, so
+    // the stream waits for its outbox to drain before it goes.
+    async fn close(stream: Self::Stream<'_>) {
+        poll_fn(|cx| {
+            let mut held = stream.outbox.borrow_mut();
+            if (held.gathered.is_empty() && !held.writing) || held.failed.is_some() {
+                return Poll::Ready(());
+            }
+            held.client = Some(cx.waker().clone());
+            Poll::Pending
+        })
+        .await;
     }
 }
 
@@ -133,14 +149,72 @@ async fn read_into(stream: Rc<TcpStream>, pipe: Rc<RefCell<Pipe>>) {
     }
 }
 
+/// What the client has written and the writing task has not handed to the kernel yet.
+///
+/// Two buffers take turns: the client writes into one while the task's write owns the other, and
+/// the task takes everything gathered at once, so the packets written while a write is in flight
+/// leave in the next one. Each write is one operation of the driver.
+#[derive(Default)]
+struct Outbox {
+    gathered: Vec<u8>,
+    /// The buffer the last write gave back, for the next turn.
+    spare: Vec<u8>,
+    /// Set while a write is with the kernel.
+    writing: bool,
+    /// Set when a write failed: the client's next write or flush reports it.
+    failed: Option<ErrorKind>,
+    /// The writing task, waiting for bytes.
+    writer: Option<Waker>,
+    /// The client, waiting for the gathered bytes to drain below the limit.
+    client: Option<Waker>,
+}
+
+/// How many bytes the client may gather ahead of the writing task before a flush waits.
+const GATHER_LIMIT: usize = 64 * 1024;
+
+/// The writing task of one connection.
+async fn write_from(stream: Rc<TcpStream>, outbox: Rc<RefCell<Outbox>>) {
+    loop {
+        let gathered = poll_fn(|cx| {
+            let mut held = outbox.borrow_mut();
+            if held.gathered.is_empty() {
+                held.writer = Some(cx.waker().clone());
+                return Poll::Pending;
+            }
+            let spare = std::mem::take(&mut held.spare);
+            let gathered = std::mem::replace(&mut held.gathered, spare);
+            held.writing = true;
+            if let Some(client) = held.client.take() {
+                client.wake();
+            }
+            Poll::Ready(gathered)
+        })
+        .await;
+        let BufResult(written, mut gathered) = (&*stream).write_all(gathered).await;
+        gathered.clear();
+        let mut held = outbox.borrow_mut();
+        held.spare = gathered;
+        held.writing = false;
+        if let Some(client) = held.client.take() {
+            client.wake();
+        }
+        if written.is_err() {
+            held.failed = Some(ErrorKind::Other);
+            if let Some(client) = held.client.take() {
+                client.wake();
+            }
+            return;
+        }
+    }
+}
+
 /// The stream the client reads and writes on a compio host.
 pub struct CompioStream {
-    stream: Rc<TcpStream>,
     pipe: Rc<RefCell<Pipe>>,
-    /// The packet being written, handed to `io_uring` whole on the flush and kept for the next one.
-    outgoing: Vec<u8>,
-    /// The reading task, which ends with the stream.
+    outbox: Rc<RefCell<Outbox>>,
+    /// The reading and the writing task, which end with the stream.
     _reader: JoinHandle<()>,
+    _writer: JoinHandle<()>,
 }
 
 impl std::fmt::Debug for CompioStream {
@@ -155,53 +229,82 @@ impl ErrorType for CompioStream {
     type Error = ErrorKind;
 }
 
-impl Read for CompioStream {
-    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ErrorKind> {
-        poll_fn(|cx| {
-            let mut held = self.pipe.borrow_mut();
-            let held = &mut *held;
-            let Some(first) = held.filled.front() else {
-                if let Some(end) = held.end {
-                    return Poll::Ready(Err(end));
-                }
-                held.client = Some(cx.waker().clone());
-                return Poll::Pending;
-            };
-            let available = &first[held.at..];
-            let taken = available.len().min(buf.len());
-            buf[..taken].copy_from_slice(&available[..taken]);
-            held.at += taken;
-            if held.at == first.len() {
-                let mut emptied = held.filled.pop_front().expect("the first buffer is there");
-                emptied.clear();
-                held.spare.push(emptied);
-                held.at = 0;
-                if let Some(reader) = held.reader.take() {
-                    reader.wake();
-                }
+impl CompioStream {
+    /// Copies what the pipe holds into `buf`; `None` when it holds nothing yet.
+    fn take_waiting(&self, buf: &mut [u8]) -> Option<Result<usize, ErrorKind>> {
+        let mut held = self.pipe.borrow_mut();
+        let held = &mut *held;
+        let Some(first) = held.filled.front() else {
+            return held.end.map(Err);
+        };
+        let available = &first[held.at..];
+        let taken = available.len().min(buf.len());
+        buf[..taken].copy_from_slice(&available[..taken]);
+        held.at += taken;
+        if held.at == first.len() {
+            let mut emptied = held.filled.pop_front().expect("the first buffer is there");
+            emptied.clear();
+            held.spare.push(emptied);
+            held.at = 0;
+            if let Some(reader) = held.reader.take() {
+                reader.wake();
             }
-            Poll::Ready(Ok(taken))
+        }
+        Some(Ok(taken))
+    }
+}
+
+impl Read for CompioStream {
+    // The client reads a packet's header a byte at a time: each read is a copy out of the
+    // buffer the reading task filled, and waits only when the buffer is empty.
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ErrorKind> {
+        if let Some(read) = self.take_waiting(buf) {
+            return read;
+        }
+        poll_fn(|cx| {
+            if let Some(read) = self.take_waiting(buf) {
+                return Poll::Ready(read);
+            }
+            self.pipe.borrow_mut().client = Some(cx.waker().clone());
+            Poll::Pending
         })
         .await
     }
 }
 
 impl Write for CompioStream {
-    // The client writes a packet in pieces and flushes after each packet, so the pieces gather in
-    // the owned buffer and the flush hands them to the kernel in one write.
+    // The client writes a packet in pieces and flushes after each packet: the pieces gather in
+    // the outbox, and the flush hands them to the writing task, which takes all that gathered
+    // in one write.
     fn write(&mut self, buf: &[u8]) -> impl Future<Output = Result<usize, ErrorKind>> {
-        self.outgoing.extend_from_slice(buf);
-        std::future::ready(Ok(buf.len()))
+        let mut held = self.outbox.borrow_mut();
+        let written = held.failed.map_or_else(
+            || {
+                held.gathered.extend_from_slice(buf);
+                Ok(buf.len())
+            },
+            Err,
+        );
+        std::future::ready(written)
     }
 
     async fn flush(&mut self) -> Result<(), ErrorKind> {
-        if self.outgoing.is_empty() {
-            return Ok(());
-        }
-        let outgoing = std::mem::take(&mut self.outgoing);
-        let BufResult(written, mut outgoing) = (&*self.stream).write_all(outgoing).await;
-        outgoing.clear();
-        self.outgoing = outgoing;
-        written.map_err(|_| ErrorKind::Other)
+        poll_fn(|cx| {
+            let mut held = self.outbox.borrow_mut();
+            if let Some(failed) = held.failed {
+                return Poll::Ready(Err(failed));
+            }
+            if let Some(writer) = held.writer.take() {
+                writer.wake();
+            }
+            // The client goes on while the task writes; it waits only when it runs this far
+            // ahead of the kernel.
+            if held.gathered.len() > GATHER_LIMIT {
+                held.client = Some(cx.waker().clone());
+                return Poll::Pending;
+            }
+            Poll::Ready(Ok(()))
+        })
+        .await
     }
 }

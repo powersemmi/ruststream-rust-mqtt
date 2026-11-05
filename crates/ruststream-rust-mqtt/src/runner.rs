@@ -125,6 +125,14 @@ pub trait Network {
 
     /// Completes after `duration`, on the clock of the runtime the runner runs on.
     fn sleep(duration: Duration) -> impl Future<Output = ()>;
+
+    /// Completes once what was written to `stream` has left, so the DISCONNECT the runner wrote
+    /// last reaches the server. The default completes at once: a stream whose flush already
+    /// waits for its bytes needs nothing more.
+    fn close(stream: Self::Stream<'_>) -> impl Future<Output = ()> {
+        drop(stream);
+        core::future::ready(())
+    }
 }
 
 /// The task that owns an [`MqttBroker`](crate::MqttBroker)'s connection.
@@ -240,7 +248,13 @@ async fn session<N: Network>(link: &Shared<Link>, network: &mut N) -> Result<(),
 
     link.set_phase(Phase::Open);
     link.connected.signal(Ok(()));
-    serve::<N, _>(link, &mut client).await
+    serve::<N, _>(link, &mut client).await?;
+    // The session is over whichever way the DISCONNECT goes; a stream the client gives back
+    // drains before the session ends.
+    if let Ok(stream) = client.disconnect(&DisconnectOptions::new()).await {
+        N::close(stream).await;
+    }
+    Ok(())
 }
 
 /// The keep-alive the session announces.
@@ -622,11 +636,7 @@ async fn on_command<Stream: Read + Write>(
                 })),
             }
         }
-        Command::Shutdown => {
-            // The session is over whichever way the DISCONNECT goes.
-            let _ = client.disconnect(&DisconnectOptions::new()).await;
-            return Ok(Step::Stop);
-        }
+        Command::Shutdown => return Ok(Step::Stop),
     }
     Ok(Step::Continue)
 }
