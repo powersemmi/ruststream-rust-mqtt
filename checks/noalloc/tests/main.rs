@@ -3,4 +3,6 @@
 //! protocol the variant speaks itself.
 
 mod conformance;
+mod harness;
+mod live;
 mod support;
