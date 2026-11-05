@@ -1,0 +1,15 @@
+target/
+**/*.rs.bk
+
+.venv/
+__pycache__/
+
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+tmp/
+
+# The test stand's generated certificate chain (`just tls-certs`).
+.stand-tls/

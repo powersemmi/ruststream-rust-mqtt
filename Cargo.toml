@@ -1,0 +1,48 @@
+[workspace]
+resolver = "3"
+members = ["crates/ruststream-rust-mqtt"]
+
+[workspace.package]
+version = "0.8.0-rc.1"
+edition = "2024"
+# The floor tracks the core line: ruststream 0.8 requires 1.95, so a lower one cannot resolve it.
+rust-version = "1.95"
+license = "Apache-2.0"
+repository = "https://github.com/powersemmi/ruststream-rust-mqtt"
+authors = ["RustStream contributors"]
+
+[workspace.dependencies]
+ruststream-rust-mqtt = { path = "crates/ruststream-rust-mqtt" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unsafe_op_in_unsafe_fn = "deny"
+unreachable_pub = "deny"
+missing_docs = "deny"
+missing_debug_implementations = "warn"
+unused_qualifications = "warn"
+
+[workspace.lints.clippy]
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+perf = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_const_for_fn = "allow"
+multiple_crate_versions = "allow"
+redundant_pub_crate = "allow"
+
+# What ships is optimized across crate boundaries: the framework is generic to the point where a
+# dispatch path is only as cheap as the inlining it gets, and a build that stops at each crate
+# boundary is not the one to publish numbers from.
+[profile.release]
+lto = "fat"
+
+# The benchmarks measure what ships, so they are built the way a release is: the profile inherits
+# it whole, and the only addition is the line tables a profile needs to name functions. Debug
+# information is metadata and changes no codegen decision.
+[profile.bench]
+inherits = "release"
+debug = "line-tables-only"

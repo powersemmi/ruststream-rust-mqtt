@@ -1,0 +1,22 @@
+# ruststream-rust-mqtt
+
+> `ruststream-rust-mqtt` is the MQTT 5 broker crate for RustStream, a Rust framework for services that subscribe to message brokers and publish to them. It is built on the `rust-mqtt` client and targets the embassy and compio runtimes of RustStream.
+
+This site holds the guides, one page per component and the architecture of the crate; the API reference is on docs.rs, and the framework itself is documented on the RustStream site.
+
+## Guides
+
+- [Guides](https://powersemmi.github.io/ruststream-rust-mqtt/latest/): what the crate is
+
+## Components
+
+- [Components](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/): the parts of the crate an MQTT service uses, one page each
+
+## Architecture
+
+- [Architecture](https://powersemmi.github.io/ruststream-rust-mqtt/latest/architecture/): where the crate sits between the MQTT broker and the RustStream runtime
+
+## Reference
+
+- [API reference](https://docs.rs/ruststream-rust-mqtt): the crate's rustdoc
+- [RustStream](https://powersemmi.github.io/ruststream/latest/): the framework

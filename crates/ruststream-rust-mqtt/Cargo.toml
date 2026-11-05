@@ -1,0 +1,19 @@
+[package]
+name = "ruststream-rust-mqtt"
+description = "MQTT 5 broker implementation for the RustStream messaging framework, built on rust-mqtt, for the embassy and compio runtimes."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage = "https://powersemmi.github.io/ruststream-rust-mqtt/latest/"
+authors.workspace = true
+readme = "../../README.md"
+keywords = ["mqtt", "mqtt5", "embedded", "no-std", "ruststream"]
+categories = ["embedded", "no-std", "network-programming"]
+
+[package.metadata.docs.rs]
+all-features = true
+
+[lints]
+workspace = true
