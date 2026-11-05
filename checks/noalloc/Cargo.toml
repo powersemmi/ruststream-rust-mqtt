@@ -60,3 +60,35 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("alloc", "
 [[test]]
 name = "suite"
 path = "tests/main.rs"
+
+# The device examples the site shows, built without `alloc` from the crate's own example files;
+# each carries its tests, which `cargo test` runs.
+[[example]]
+name = "device_service"
+path = "../../crates/ruststream-rust-mqtt/examples/device/device_service.rs"
+test = true
+
+[[example]]
+name = "device_config"
+path = "../../crates/ruststream-rust-mqtt/examples/device/device_config.rs"
+test = true
+
+[[example]]
+name = "device_memory"
+path = "../../crates/ruststream-rust-mqtt/examples/device/device_memory.rs"
+test = true
+
+[[example]]
+name = "device_testing"
+path = "../../crates/ruststream-rust-mqtt/examples/device/device_testing.rs"
+test = true
+
+[[example]]
+name = "manual_device_service"
+path = "../../crates/ruststream-rust-mqtt/examples/manual/device_service.rs"
+test = true
+
+[[example]]
+name = "manual_device_testing"
+path = "../../crates/ruststream-rust-mqtt/examples/manual/device_testing.rs"
+test = true
