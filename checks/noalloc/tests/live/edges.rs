@@ -10,8 +10,8 @@ use ruststream::{
 use ruststream_rust_mqtt::{MqttConfig, MqttError, MqttPublish, Qos};
 
 use crate::support::{
-    WAIT, auth_stand, broker_with, connect, leak, live_broker, next, open, publish, publisher_of,
-    stand, topic, unique_client_id,
+    auth_stand, broker_with, connect, leak, live_broker, next, open, publish, publisher_of, stand,
+    topic, unique_client_id,
 };
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
