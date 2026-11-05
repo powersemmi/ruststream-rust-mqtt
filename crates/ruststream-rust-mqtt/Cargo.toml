@@ -1,6 +1,6 @@
 [package]
 name = "ruststream-rust-mqtt"
-description = "MQTT 5 broker implementation for the RustStream messaging framework, built on rust-mqtt, for the embassy and compio runtimes."
+description = "MQTT 5 broker for the RustStream messaging framework: a device variant without a heap on embassy, and a heap variant over rust-mqtt for embassy and compio."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
