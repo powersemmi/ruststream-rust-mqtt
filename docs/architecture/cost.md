@@ -34,3 +34,16 @@ It allocates nothing, and the runner sends the packet.
 Every queue is fixed at startup: 32 commands, 8 staging slots and 16 deliveries for each subscription.
 
 On compio the network adds one copy for each read: `io_uring` reads into a buffer it owns, and the client reads out of it.
+
+## Measured
+
+The repository's code-cost benchmarks count what one message costs a service on the core that runs it: instructions under callgrind and allocations under DHAT, release builds with fat LTO, the difference between a run of 500 and a run of 1000 messages against mosquitto.
+The device variant runs on the host for the measurement, its app and runner driven on one thread.
+
+| What one message costs | Device variant | Heap variant on compio | `ruststream-rumqttc` |
+|---|---|---|---|
+| A delivery at `QoS` 1, acknowledged | 6,866 instructions, 0 allocations | 10,210 instructions, 2.18 allocations | 8,937 instructions, 1.15 allocations |
+| A publish (a reply's cost less a delivery's) | 4,297 instructions, 0 allocations | 12,085 instructions, 0.29 allocations | 8,832 instructions, 6.06 allocations |
+
+The device service reads and answers raw bytes, while the two others decode and encode a JSON body, so its instructions include no codec.
+`just bench-code` measures the heap variant and `just bench-code-noalloc` the device variant.
