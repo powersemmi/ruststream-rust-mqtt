@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 title: Testing a device service
-description: "A device service is tested on the host with the embedded TestApp, a compio service with the compio TestApp; both connect the broker in process."
+description: "A device service is tested on the host with the embedded TestApp over the memory the test declares, a compio service with the compio TestApp; both connect the broker in process."
 ---
 
 import Tabs from '@theme/Tabs';
@@ -22,18 +22,19 @@ The tests need `testing` next to the runtime feature of the service: `embassy` f
 
 ## A test
 
-The test starts the app with a broker built by `MqttBroker::new`, publishes a message to it as another client of the server would, and asserts what the handler received and how it settled.
+The test declares the broker's memory as a `static`, as the board does, and starts the app with a broker built by `MqttBroker::new` over it.
+It publishes a message to it as another client of the server would, and asserts what the handler received and how it settled.
 
 <Tabs groupId="api">
 <TabItem value="macros" label="Macros">
 
-```rust reference="examples/mqtt_testing_embedded.rs#test"
+```rust reference="examples/device/device_testing.rs#test"
 ```
 
 </TabItem>
 <TabItem value="manual" label="Manual">
 
-```rust reference="examples/manual/mqtt_testing_embedded.rs#test"
+```rust reference="examples/manual/device_testing.rs#test"
 ```
 
 </TabItem>
@@ -47,19 +48,21 @@ A `retry_after` copy comes back once `advance` has moved the clock past its dela
 <Tabs groupId="api">
 <TabItem value="macros" label="Macros">
 
-```rust reference="examples/mqtt_testing_embedded.rs#advance"
+```rust reference="examples/device/device_testing.rs#advance"
 ```
 
 </TabItem>
 <TabItem value="manual" label="Manual">
 
-```rust reference="examples/manual/mqtt_testing_embedded.rs#advance"
+```rust reference="examples/manual/device_testing.rs#advance"
 ```
 
 </TabItem>
 </Tabs>
 
 ## On compio
+
+A compio service is the heap variant, and its test needs no memory of its own.
 
 <Tabs groupId="api">
 <TabItem value="macros" label="Macros">

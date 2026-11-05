@@ -15,6 +15,12 @@
   ],
   "rules": [
     "Spawn the `MqttRunner` that `MqttBroker::new` returns as a task of its own on a device, over `EmbassyNetwork`; the broker connects only while its runner runs, and on compio `MqttBroker::compio` starts the runner itself (MqttBroker page).",
+    "Declare the device broker's memory as `static MQTT: ConstStaticCell<MqttState<MESSAGES, PACKET, SUBSCRIPTIONS>> = ConstStaticCell::new(MqttState::new())`, take it once with `MQTT.take()` and pass it to `MqttBroker::new(state, config)` (MqttState page).",
+    "Size `MqttState` by its three numbers: `MESSAGES` deliveries held at once, `PACKET` bytes for the largest packet in either direction, and `SUBSCRIPTIONS` open subscriptions; the runner stops reading while every receive buffer is held (MqttState page).",
+    "On a device a delivery borrows its topic and payload from the receive buffer its packet arrived in, so a handler reads the payload with `#[derive(Deserialized)]` over `&'a [u8]` and a reply leaves as the bytes of a `#[derive(Serialized)]` type (MqttBroker and Getting started on a device pages).",
+    "Keep a device's `MqttConfig` in a `const`: its texts are `&'static str` literals of the firmware (MqttConfig page).",
+    "Select the heap variant with the `alloc` feature of the crate, which `compio` implies; a feature of `ruststream` that turns its `alloc` on, such as `json`, needs the crate's `alloc` feature as well (MqttBroker page).",
+    "Test a device service on the host with the `testing` feature, declaring a `static` `MqttState` in the test and building the broker over it as the board does (The embedded TestApp page).",
     "Import `ruststream_rust_mqtt::prelude::*` in the file that mounts handlers; it brings the framework's prelude and this crate's descriptors, policy and steps (Components pages).",
     "Subscribe with `MqttTopic` for one topic a publisher can name and `MqttFilter` for a filter with `+` or `#`; a wildcard in an `MqttTopic` is refused when the app starts (MqttTopic and MqttFilter pages).",
     "Name where an `MqttFilter` subscription's retry copies go with `.out_retry(MqttPublish::default()).to(\"topic\")`, and on a device add `.retry_capacity::<N>()` after the mount for `retry_after` (Retry after page).",

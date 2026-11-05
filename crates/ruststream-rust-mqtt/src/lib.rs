@@ -24,7 +24,29 @@
 //!   policy, the live publisher, and the per-message quality of service and retain flag.
 //! - [`Network`]: the link the runner connects over; the crate implements it over embassy-net
 //!   (feature `embassy`) and over compio (feature `compio`).
+//! - `MqttState` (device variant): the memory of a device broker, declared as a `static`; its
+//!   three numbers fix the deliveries held at once, the largest packet and the open subscriptions.
 //! - [`prelude`]: the crate's types beside the framework's prelude.
+//!
+//! # Where things are
+//!
+//! The site at <https://powersemmi.github.io/ruststream-rust-mqtt/latest/> teaches each topic on a
+//! page of its own:
+//!
+//! - Start with [getting started on a device](https://powersemmi.github.io/ruststream-rust-mqtt/latest/guides/getting-started-device/)
+//!   or [on a compio host](https://powersemmi.github.io/ruststream-rust-mqtt/latest/guides/getting-started-compio/).
+//! - The broker, its runner and the two variants: [`MqttBroker`](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/).
+//! - The device broker's memory: [`MqttState`](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/memory/).
+//! - The settings: [`MqttConfig`](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/configuration/).
+//! - The link: [`Network`](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/network/).
+//! - Subscriptions: [`MqttTopic`](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/subscriptions/)
+//!   and [`MqttFilter`](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/subscriptions/mqtt-filter/).
+//! - Settlement: [acknowledgement](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/settlement/)
+//!   and [retry after](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/settlement/retry-after/).
+//! - Publishing: [`MqttPublish`](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/publishing/).
+//! - Tests: [the embedded `TestApp`](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/testing/)
+//!   and [the live stand](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/testing/live/).
+//! - [What a delivery and a publish cost](https://powersemmi.github.io/ruststream-rust-mqtt/latest/architecture/cost/).
 //!
 //! # Examples
 //!

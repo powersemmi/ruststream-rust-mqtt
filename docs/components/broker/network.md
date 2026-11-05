@@ -13,10 +13,11 @@ import TabItem from '@theme/TabItem';
 
 The stream is anything that reads and writes through `embedded-io-async`, and a read of it must be cancel-safe: the runner stops waiting for the next packet of the server when a handle sends it work, and picks the read up again afterwards.
 A device uses [`EmbassyNetwork`](api:ruststream_rust_mqtt::EmbassyNetwork) (feature `embassy`): a TCP socket on an embassy-net stack, over a receive buffer and a send buffer that the task of the runner owns.
+The runner reads a packet from the socket straight into a receive buffer of the broker's [memory](./memory.md), exactly as long as the fixed header of the packet says, so a PUBLISH stays where it arrived and the delivery borrows from it.
 A host name in the address is resolved by the DNS client of the stack, and an IPv4 literal is used as it is.
 A failure is an [`EmbassyConnectError`](api:ruststream_rust_mqtt::EmbassyConnectError): the name did not resolve, or the TCP connection failed.
 
-A compio host uses [`CompioNetwork`](api:ruststream_rust_mqtt::CompioNetwork) (feature `compio`), and [`MqttBroker::compio`](api:ruststream_rust_mqtt::MqttBroker::compio) starts the runner over it.
+A compio host, on the heap variant, uses [`CompioNetwork`](api:ruststream_rust_mqtt::CompioNetwork) (feature `compio`), and [`MqttBroker::compio`](api:ruststream_rust_mqtt::MqttBroker::compio) starts the runner over it.
 `io_uring` reads into a buffer it owns until the read completes, so a task of the connection reads the stream into owned buffers and the client reads out of them.
 That costs one copy per read, and a read the client stops waiting for loses nothing.
 
@@ -30,13 +31,13 @@ The runner of a device, over embassy-net.
 <Tabs groupId="api">
 <TabItem value="macros" label="Macros">
 
-```rust reference="examples/mqtt_device.rs#runner"
+```rust reference="examples/device/device_service.rs#board"
 ```
 
 </TabItem>
 <TabItem value="manual" label="Manual">
 
-```rust reference="examples/manual/mqtt_device.rs#runner"
+```rust reference="examples/manual/device_service.rs#board"
 ```
 
 </TabItem>
