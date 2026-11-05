@@ -16,6 +16,11 @@ allow = [
     # unicode-ident is (MIT OR Apache-2.0) AND Unicode-3.0; the Unicode license
     # only covers the embedded character tables and is permissive.
     "Unicode-3.0",
+    # embassy-net's smoltcp and managed are 0BSD; compio's slotmap is Zlib; the allocation guard
+    # of the core runtime (assert_no_alloc) is BSD-1-Clause. All OSI-approved and permissive.
+    "0BSD",
+    "Zlib",
+    "BSD-1-Clause",
 ]
 
 [bans]
@@ -27,3 +32,6 @@ multiple-versions = "warn"
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+# The unpublished test-suite crate of the core, a dev-dependency every broker repository takes
+# from core main.
+allow-git = ["https://github.com/powersemmi/ruststream"]
