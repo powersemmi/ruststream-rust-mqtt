@@ -16,6 +16,8 @@ check:
     # its sources are linted and tested from a workspace of their own.
     cargo fmt --manifest-path checks/noalloc/Cargo.toml -- --check
     cargo clippy --manifest-path checks/noalloc/Cargo.toml --all-targets -- -D warnings
+    cargo fmt --manifest-path checks/bench-noalloc/Cargo.toml -- --check
+    cargo clippy --manifest-path checks/bench-noalloc/Cargo.toml --all-targets -- -D warnings
     cargo check --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features
     cargo check -p ruststream-rust-mqtt-bench --all-targets
     cargo check --workspace --no-default-features

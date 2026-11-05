@@ -145,10 +145,13 @@ jobs:
           cargo clippy --locked --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features -- -D warnings
           cargo clippy --locked -p ruststream-rust-mqtt-bench --all-targets -- -D warnings
           cargo clippy --locked --manifest-path checks/noalloc/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --locked --manifest-path checks/bench-noalloc/Cargo.toml --all-targets -- -D warnings
 
       - name: cargo fmt (device variant suites)
         if: "!cancelled() && env.RUST_CHANGED == 'true'"
-        run: cargo fmt --manifest-path checks/noalloc/Cargo.toml -- --check
+        run: |
+          cargo fmt --manifest-path checks/noalloc/Cargo.toml -- --check
+          cargo fmt --manifest-path checks/bench-noalloc/Cargo.toml -- --check
 
       # The benchmark package is left out of the all-features legs on purpose: it is built with the
       # feature set a service ships, and the framework's harness feature is a compile error in it.
