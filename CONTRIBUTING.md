@@ -37,3 +37,6 @@ just ci             # check and test, plus codespell, cargo deny and zizmor
   Chinese (`website/i18n/`), and an edit reaches all three. `scripts/lint_doc_fences.py`,
   `scripts/check_doc_parity.py` and `scripts/check_doc_i18n.py` check the fences and the
   translations.
+  Every code block on a page is a region of a compiled example in
+  `crates/ruststream-rust-mqtt/examples/`, in a macro form and a manual form, and the tests of the
+  examples run with `cargo test -p ruststream-rust-mqtt --all-features --test examples`.

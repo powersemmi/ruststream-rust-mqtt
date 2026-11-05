@@ -3,6 +3,7 @@
   "folders": [
     "docs",
     "crates/ruststream-rust-mqtt/src",
+    "crates/ruststream-rust-mqtt/examples",
     "website/static"
   ],
   "excludeFolders": [
@@ -12,5 +13,16 @@
     "website/node_modules",
     "target"
   ],
-  "rules": []
+  "rules": [
+    "Spawn the `MqttRunner` that `MqttBroker::new` returns as a task of its own on a device, over `EmbassyNetwork`; the broker connects only while its runner runs, and on compio `MqttBroker::compio` starts the runner itself (MqttBroker page).",
+    "Import `ruststream_rust_mqtt::prelude::*` in the file that mounts handlers; it brings the framework's prelude and this crate's descriptors, policy and steps (Components pages).",
+    "Subscribe with `MqttTopic` for one topic a publisher can name and `MqttFilter` for a filter with `+` or `#`; a wildcard in an `MqttTopic` is refused when the app starts (MqttTopic and MqttFilter pages).",
+    "Name where an `MqttFilter` subscription's retry copies go with `.out_retry(MqttPublish::default()).to(\"topic\")`, and on a device add `.retry_capacity::<N>()` after the mount for `retry_after` (Retry after page).",
+    "Expect `AckError::Unsupported` from the settlement of a QoS 0 delivery and from `retry()`, which is `nack(true)`: MQTT has no packet for either, and `drop()` acknowledges (Acknowledgement and Negative acknowledgement pages).",
+    "Declare the QoS and retain flag once with `MqttPublish::default().qos(..).retain(..)` at the mount, and change one message with the `.qos(..)` and `.retain(..)` steps of `MqttPublishSteps` (MqttPublish and MqttPublishSteps pages).",
+    "Bound a slot `Out<impl Publisher<Options = MqttPublishOptions>, Marker>` in a handler body that takes the `qos` or `retain` step (MqttPublishSteps page).",
+    "Spread a topic over replicas with `.shared(\"group\")` on the descriptor, so the server hands each message to one member of the share group (Shared subscription page).",
+    "Test a service with the embedded `TestApp` (device) or the compio `TestApp` (host) on the production app, with the `testing` feature, addressing the broker as `tb.broker::<MqttBroker>()` and moving time with `advance` (Testing pages).",
+    "Run a live test only for what the in-process transport leaves to the server, gated by `MQTT_TEST_URL`, and start the stand with `just test-brokers` (The live stand page)."
+  ]
 }

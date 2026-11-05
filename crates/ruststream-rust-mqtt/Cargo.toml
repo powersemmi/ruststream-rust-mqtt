@@ -11,9 +11,233 @@ authors.workspace = true
 readme = "../../README.md"
 keywords = ["mqtt", "mqtt5", "embedded", "no-std", "ruststream"]
 categories = ["embedded", "no-std", "network-programming"]
+# Every file under `tests/` is a module of one test binary.
+autotests = false
 
 [package.metadata.docs.rs]
 all-features = true
 
+[features]
+default = []
+# The network of a device: the runner connects through embassy-net's TCP socket.
+embassy = ["ruststream/embassy", "dep:embassy-net", "dep:embassy-time"]
+# The network of a host on the compio runtime: the broker starts its runner on the core that
+# connects it, over compio's TCP stream.
+compio = ["ruststream/compio", "dep:compio"]
+# The in-process transport the test harness connects the broker through.
+testing = ["ruststream/testing"]
+
+[dependencies]
+# The framework's heap variant: the client keeps every field it receives in a heap buffer of its
+# own, so the crate turns `alloc` on for the whole build.
+ruststream = { workspace = true, features = ["alloc"] }
+# The contract crate, for the pieces of the family's machinery the facade does not re-export: the
+# type that picks a lock by the `send` feature, and the diagnostics macros.
+ruststream-core = { workspace = true, features = ["alloc"] }
+rust-mqtt = { workspace = true, features = ["v5", "alloc"] }
+embedded-io-async.workspace = true
+embassy-sync.workspace = true
+embassy-futures.workspace = true
+heapless.workspace = true
+futures-core.workspace = true
+thiserror.workspace = true
+embassy-net = { workspace = true, optional = true }
+embassy-time = { workspace = true, optional = true }
+compio = { workspace = true, optional = true }
+
+[dev-dependencies]
+ruststream = { workspace = true, features = ["testing", "macros", "json", "embassy", "conformance"] }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time", "net", "test-util"] }
+# The live suites run the runner on tokio, over a TCP stream the adapter lends embedded-io.
+embedded-io-adapters = { version = "0.7", features = ["tokio-1"] }
+# The lock of the broker's state next to the harness's multi-thread runtime, on a host.
+critical-section = { version = "1.1", features = ["std"] }
+futures = "0.3"
+# The task `#[ruststream::app(runtime = embassy)]` generates, on the host the tests run on.
+embassy-executor = { version = "0.10", features = ["platform-std", "executor-thread"] }
+embassy-futures.workspace = true
+# Builds the examples' tests into one test binary (`tests/examples.rs`) instead of a test binary
+# per example. It lives in the core repository and is not published: a dev-dependency without a
+# version is dropped on publish.
+ruststream-example-suite = { git = "https://github.com/powersemmi/ruststream", branch = "main" }
+
 [lints]
 workspace = true
+
+[[test]]
+name = "suite"
+path = "tests/main.rs"
+
+# The tests of the examples, one module per example, in a binary of their own beside the suite.
+[[test]]
+name = "examples"
+path = "tests/examples.rs"
+
+# --- examples ---
+
+[[example]]
+name = "mqtt_settlement_ack"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_settlement_ack"
+path = "examples/manual/mqtt_settlement_ack.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_settlement_qos0"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_settlement_qos0"
+path = "examples/manual/mqtt_settlement_qos0.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_settlement_nack"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_settlement_nack"
+path = "examples/manual/mqtt_settlement_nack.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_subscriptions_topic"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_subscriptions_topic"
+path = "examples/manual/mqtt_subscriptions_topic.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_subscriptions_filter"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_subscriptions_filter"
+path = "examples/manual/mqtt_subscriptions_filter.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_subscriptions_qos"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_subscriptions_qos"
+path = "examples/manual/mqtt_subscriptions_qos.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_subscriptions_shared"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_subscriptions_shared"
+path = "examples/manual/mqtt_subscriptions_shared.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_subscriptions_twice"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_subscriptions_twice"
+path = "examples/manual/mqtt_subscriptions_twice.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_publishing_policy"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_publishing_policy"
+path = "examples/manual/mqtt_publishing_policy.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_publishing_steps"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_publishing_steps"
+path = "examples/manual/mqtt_publishing_steps.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_publishing_retained"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_publishing_retained"
+path = "examples/manual/mqtt_publishing_retained.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_publishing_headers"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_publishing_headers"
+path = "examples/manual/mqtt_publishing_headers.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_settlement_retry_after"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_settlement_retry_after"
+path = "examples/manual/mqtt_settlement_retry_after.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_device"
+required-features = ["testing", "embassy"]
+
+[[example]]
+name = "manual_mqtt_device"
+path = "examples/manual/mqtt_device.rs"
+required-features = ["testing", "embassy"]
+
+[[example]]
+name = "mqtt_config"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_config"
+path = "examples/manual/mqtt_config.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_network_compio"
+required-features = ["testing", "compio"]
+
+[[example]]
+name = "manual_mqtt_network_compio"
+path = "examples/manual/mqtt_network_compio.rs"
+required-features = ["testing", "compio"]
+
+[[example]]
+name = "mqtt_testing_embedded"
+required-features = ["testing"]
+
+[[example]]
+name = "manual_mqtt_testing_embedded"
+path = "examples/manual/mqtt_testing_embedded.rs"
+required-features = ["testing"]
+
+[[example]]
+name = "mqtt_testing_compio"
+required-features = ["testing", "compio"]
+
+[[example]]
+name = "manual_mqtt_testing_compio"
+path = "examples/manual/mqtt_testing_compio.rs"
+required-features = ["testing", "compio"]
+
+[[example]]
+name = "mqtt_testing_live"
+required-features = ["testing", "compio"]

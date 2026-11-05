@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/ruststream-rust-mqtt"]
+members = ["crates/ruststream-rust-mqtt", "crates/ruststream-rust-mqtt-bench"]
 
 [workspace.package]
 version = "0.8.0-rc.1"
@@ -13,6 +13,22 @@ authors = ["RustStream contributors"]
 
 [workspace.dependencies]
 ruststream-rust-mqtt = { path = "crates/ruststream-rust-mqtt" }
+# The core line this crate tracks, from its first pre-release on, as the 0.7 wave pinned it.
+ruststream = { version = ">=0.8.0-rc.1, <0.9.0", default-features = false }
+ruststream-core = { version = ">=0.8.0-rc.1, <0.9.0", default-features = false }
+
+rust-mqtt = { version = "0.6", default-features = false }
+embedded-io-async = "0.7"
+embassy-sync = "0.8"
+embassy-futures = "0.1.2"
+# The board's driver brings the medium it speaks; `medium-ip` is the least of them, so the crate
+# builds on its own.
+embassy-net = { version = "0.9", features = ["tcp", "dns", "proto-ipv4", "medium-ip"] }
+embassy-time = "0.5.1"
+heapless = { version = "0.9", default-features = false }
+futures-core = { version = "0.3", default-features = false }
+thiserror = { version = "2", default-features = false }
+compio = { version = "=0.20.0-beta.1", features = ["runtime", "net", "time", "io"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
