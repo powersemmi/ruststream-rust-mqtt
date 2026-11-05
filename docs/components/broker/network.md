@@ -17,7 +17,7 @@ The runner reads a packet from the socket straight into a receive buffer of the 
 A host name in the address is resolved by the DNS client of the stack, and an IPv4 literal is used as it is.
 A failure is an [`EmbassyConnectError`](api:ruststream_rust_mqtt::EmbassyConnectError): the name did not resolve, or the TCP connection failed.
 
-A compio host, on the heap variant, uses [`CompioNetwork`](api:ruststream_rust_mqtt::CompioNetwork) (feature `compio`), and [`MqttBroker::compio`](api:ruststream_rust_mqtt::MqttBroker::compio) starts the runner over it.
+A compio host, on the heap variant, uses `CompioNetwork` (feature `compio`), and `MqttBroker::compio` starts the runner over it.
 `io_uring` reads into a buffer it owns until the read completes, so a task of the connection reads the stream into owned buffers and the client reads out of them.
 That costs one copy per read, and a read the client stops waiting for loses nothing.
 

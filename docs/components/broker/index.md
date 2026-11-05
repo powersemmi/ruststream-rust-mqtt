@@ -35,7 +35,7 @@ A handler reads the payload as bytes it borrows, with `#[derive(Deserialized)]`,
 
 The heap variant is the `alloc` feature, which `compio` turns on.
 The broker runs over the [`rust-mqtt`](https://docs.rs/rust-mqtt) client, which keeps every field it receives in a heap buffer of its own, and the settings hold owned strings.
-`MqttBroker::new(config)` takes no state, and on a compio host [`MqttBroker::compio`](api:ruststream_rust_mqtt::MqttBroker::compio) starts the runner on the core that connects the broker, so the host spawns nothing.
+`MqttBroker::new(config)` takes no state, and on a compio host `MqttBroker::compio` starts the runner on the core that connects the broker, so the host spawns nothing.
 A device that has a heap takes this variant too, with `alloc` and `embassy`.
 The [compio guide](../../guides/getting-started-compio.md#the-heap-variant) shows it.
 
