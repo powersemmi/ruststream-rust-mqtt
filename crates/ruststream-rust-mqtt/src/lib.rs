@@ -15,8 +15,9 @@
 //!   (feature `embassy`) and over compio (feature `compio`).
 //! - [`prelude`]: the crate's types beside the framework's prelude.
 //!
-//! The crate builds the framework's `alloc` variant: the client keeps each field it receives in
-//! a heap buffer of its own.
+//! The crate builds the framework's `alloc` variant: the client, rust-mqtt 0.6, gives each field it
+//! receives a heap buffer of its own, so a delivery holds two of them, its topic and its payload,
+//! moved in without a copy.
 //!
 //! # Examples
 //!

@@ -6,7 +6,7 @@ description: "A delivery takes one heap buffer for each field the client receive
 
 # What a delivery and a publish cost
 
-A delivery takes one heap buffer for each field the client received: the topic, the payload and each string property.
+The client, rust-mqtt 0.6, gives each field it receives a heap buffer of its own, so a delivery takes one buffer for each field: the topic, the payload and each string property.
 The crate builds the `alloc` variant of the framework for that reason, and the heap is the device's.
 The buffers move into the message without a copy, and they are freed when the message is dropped.
 
