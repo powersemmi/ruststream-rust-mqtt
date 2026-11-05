@@ -780,6 +780,12 @@ async fn send<
     state: &mut State<MESSAGES, PACKET, SUBSCRIPTIONS>,
     buffer: OutboundLease<PACKET>,
 ) -> Result<(), MqttError> {
+    if buffer.session != link.session() {
+        // Encoded for a session that ended before the runner took it: its packet identifier
+        // belongs to that session, and its sender was told the broker is not connected.
+        link.refuse(buffer);
+        return Ok(());
+    }
     if let Err(error) = write(stream, &buffer.bytes[..buffer.len]).await {
         match buffer.sent {
             Sent::Publish => link.answer(buffer, Err(error)),

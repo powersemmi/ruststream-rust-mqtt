@@ -121,6 +121,9 @@ impl<const MESSAGES: usize, const PACKET: usize, const SUBSCRIPTIONS: usize>
         qos: Qos,
         retain: bool,
     ) -> Result<(), MqttError> {
+        // Read before the packet identifier is taken: a session that ends meanwhile takes its
+        // identifiers with it, and the runner refuses a packet encoded for it.
+        let session = link.session();
         let mut held = PacketHeld { link, packet: None };
         let packet = if qos == Qos::AtMostOnce {
             0
@@ -143,6 +146,7 @@ impl<const MESSAGES: usize, const PACKET: usize, const SUBSCRIPTIONS: usize>
             },
         )?;
         buffer.sent = Sent::Publish;
+        buffer.session = session;
         let index = buffer.index;
         link.expect_answer(index);
         let mut awaited = AnswerAwaited {

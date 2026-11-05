@@ -201,6 +201,7 @@ impl<const MESSAGES: usize, const PACKET: usize, const SUBSCRIPTIONS: usize>
         let mut joining = Joining {
             subscriber: Some(subscriber),
         };
+        let session = link.session();
         let packet = link.take_packet().await.ok_or(MqttError::NotConnected)?;
         let mut buffer = link.outbound.take().await;
         let Some(len) = wire::subscribe(
@@ -217,6 +218,7 @@ impl<const MESSAGES: usize, const PACKET: usize, const SUBSCRIPTIONS: usize>
             ));
         };
         buffer.len = len;
+        buffer.session = session;
         buffer.sent = Sent::Subscribe {
             packet,
             subscription: joined.held.index,

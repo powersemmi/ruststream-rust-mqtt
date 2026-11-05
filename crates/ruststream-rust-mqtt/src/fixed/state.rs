@@ -123,6 +123,8 @@ pub(crate) struct Outbound<const PACKET: usize> {
     pub(crate) len: usize,
     pub(crate) index: usize,
     pub(crate) sent: Sent,
+    /// The session the packet was encoded for: its packet identifier means nothing in another.
+    pub(crate) session: u32,
 }
 
 impl<const PACKET: usize> Outbound<PACKET> {
@@ -132,6 +134,7 @@ impl<const PACKET: usize> Outbound<PACKET> {
             len: 0,
             index: 0,
             sent: Sent::Publish,
+            session: 0,
         }
     }
 }
