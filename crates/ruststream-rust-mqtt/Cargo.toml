@@ -11,9 +11,56 @@ authors.workspace = true
 readme = "../../README.md"
 keywords = ["mqtt", "mqtt5", "embedded", "no-std", "ruststream"]
 categories = ["embedded", "no-std", "network-programming"]
+# Every file under `tests/` is a module of one test binary.
+autotests = false
 
 [package.metadata.docs.rs]
 all-features = true
 
+[features]
+default = []
+# The network of a device: the runner connects through embassy-net's TCP socket.
+embassy = ["ruststream/embassy", "dep:embassy-net", "dep:embassy-time"]
+# The network of a host on the compio runtime: the broker starts its runner on the core that
+# connects it, over compio's TCP stream.
+compio = ["ruststream/compio", "dep:compio"]
+# The in-process transport the test harness connects the broker through.
+testing = ["ruststream/testing"]
+
+[dependencies]
+# The framework's heap variant: the client keeps every field it receives in a heap buffer of its
+# own, so the crate turns `alloc` on for the whole build.
+ruststream = { workspace = true, features = ["alloc"] }
+# The contract crate, for the pieces of the family's machinery the facade does not re-export: the
+# type that picks a lock by the `send` feature, and the diagnostics macros.
+ruststream-core = { workspace = true, features = ["alloc"] }
+rust-mqtt = { workspace = true, features = ["v5", "alloc"] }
+embedded-io-async.workspace = true
+embassy-sync.workspace = true
+embassy-futures.workspace = true
+heapless.workspace = true
+futures-core.workspace = true
+thiserror.workspace = true
+embassy-net = { workspace = true, optional = true }
+embassy-time = { workspace = true, optional = true }
+compio = { workspace = true, optional = true }
+
+[dev-dependencies]
+ruststream = { workspace = true, features = ["testing", "macros", "json", "embassy", "conformance"] }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time", "net", "test-util"] }
+# The live suites run the runner on tokio, over a TCP stream the adapter lends embedded-io.
+embedded-io-adapters = { version = "0.7", features = ["tokio-1"] }
+# The lock of the broker's state next to the harness's multi-thread runtime, on a host.
+critical-section = { version = "1.1", features = ["std"] }
+futures = "0.3"
+# The task `#[ruststream::app(runtime = embassy)]` generates, on the host the tests run on.
+embassy-executor = { version = "0.10", features = ["platform-std", "executor-thread"] }
+embassy-futures.workspace = true
+
 [lints]
 workspace = true
+
+[[test]]
+name = "suite"
+path = "tests/main.rs"

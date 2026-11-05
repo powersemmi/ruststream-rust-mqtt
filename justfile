@@ -7,8 +7,13 @@ default: check
 
 check:
     cargo fmt --all -- --check
-    cargo clippy --workspace --all-targets --all-features -- -D warnings
-    cargo check --workspace --all-targets --all-features
+    # The benchmark package is left out of the all-features legs on purpose: it is built with the
+    # feature set a service ships, and the framework's harness feature is a compile error in it.
+    # Its own leg follows each of them.
+    cargo clippy --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features -- -D warnings
+    cargo clippy -p ruststream-rust-mqtt-bench --all-targets -- -D warnings
+    cargo check --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features
+    cargo check -p ruststream-rust-mqtt-bench --all-targets
     cargo check --workspace --no-default-features
     # CI denies rustdoc warnings, so a broken intra-doc link fails the build. Running it here is
     # what keeps that a local finding rather than a red pull request.
@@ -17,6 +22,25 @@ check:
 test:
     cargo test --workspace --all-features --tests
     cargo test --workspace --all-features --doc
+
+# The live stand: mosquitto with an anonymous and an authenticated listener.
+brokers-up:
+    docker compose -p ruststream-rust-mqtt -f docker-compose.test.yml up -d --wait
+
+brokers-down:
+    docker compose -p ruststream-rust-mqtt -f docker-compose.test.yml down -v
+
+# The live suites against the stand. This recipe starts the stand, so a gated test that skips
+# itself here is a fault, not a developer without a broker.
+test-brokers: brokers-up
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap 'just brokers-down' EXIT
+    MQTT_TEST_URL=mqtt://127.0.0.1:1893 \
+    MQTT_TEST_AUTH_URL=mqtt://127.0.0.1:1894 \
+    MQTT_TEST_AUTH_PASSWORD=s3cret \
+    RUSTSTREAM_REQUIRE_LIVE=1 \
+        cargo test --workspace --all-features --tests -- --test-threads=1
 
 fmt:
     cargo fmt --all
@@ -35,3 +59,46 @@ typo:
     uvx codespell
 
 ci: check test typo security
+
+# A firmware binary for a Cortex-M4F: the broker's embassy surface with a heap, linked for a part
+# with 256 KiB of RAM. The lock is committed and the build takes it as is.
+check-firmware:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    RUSTFLAGS="" cargo build --locked --release --manifest-path checks/firmware/Cargo.toml \
+        --target thumbv7em-none-eabihf
+    size checks/firmware/target/thumbv7em-none-eabihf/release/ruststream-rust-mqtt-firmware
+
+# What a message costs on the service's core, counted under valgrind: instructions through
+# callgrind and allocations through DHAT, for a consuming service and a replying one on the stand's
+# mosquitto, built the way the broker ships (fat LTO, never the `testing` feature). The count of
+# deliveries per run is a leading number (default 500, the sibling broker crate's count) and is
+# read at build time. RUSTFLAGS is cleared because valgrind aborts on the instructions a recent
+# CPU advertises. Needs valgrind. The runner of the benchmarks has to be the release of the
+# library the lock file pins; the recipe installs it into `target/gungraun-runner` on the first
+# run and after the library moves. Take the machine lock of the benchmarks before running it.
+[positional-arguments]
+bench-code *ARGS: brokers-up
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap 'just brokers-down' EXIT
+    messages=500
+    if [[ "${1:-}" =~ ^[0-9]+$ ]]; then
+        messages="$1"
+        shift
+    fi
+    mkdir -p target
+    version="$(cargo pkgid gungraun)"
+    version="${version##*@}"
+    runner="$PWD/target/gungraun-runner"
+    installed="$("$runner/bin/gungraun-runner" --version 2> /dev/null || true)"
+    if [ "$installed" != "gungraun-runner $version" ]; then
+        cargo install --locked --root "$runner" gungraun-runner --version "=$version"
+    fi
+    unset GUNGRAUN_RUNNER
+    export PATH="$runner/bin:$PATH" RUSTFLAGS="" RUSTSTREAM_BENCH_MESSAGES="$messages" \
+        GUNGRAUN_HOME="$PWD/target/gungraun/$messages" MQTT_TEST_URL=mqtt://127.0.0.1:1893
+    cargo bench -p ruststream-rust-mqtt-bench --no-run
+    cargo bench -p ruststream-rust-mqtt-bench --no-fail-fast \
+        -- --output-format=json "$@" > target/bench-code.json
+    python3 scripts/bench_code_table.py --messages "$messages" target/bench-code.json

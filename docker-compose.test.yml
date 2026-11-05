@@ -1,0 +1,20 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    # mosquitto 2 reads only hashed password files, so the file is generated at startup rather
+    # than committed. The mode is widened because the broker reads it after dropping privileges.
+    command: >
+      sh -c "mosquitto_passwd -b -c /tmp/passwd tester s3cret
+      && chmod 644 /tmp/passwd
+      && exec mosquitto -c /mosquitto/config/mosquitto.conf"
+    volumes:
+      - ./mosquitto.test.conf:/mosquitto/config/mosquitto.conf:ro
+    # Ports of their own, so this stand runs beside the other MQTT broker crate's.
+    ports:
+      - "127.0.0.1:1893:1883"
+      - "127.0.0.1:1894:1884"
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h 127.0.0.1 -p 1883 -t healthcheck -E -i probe -W 3"]
+      interval: 2s
+      timeout: 5s
+      retries: 15

@@ -1,0 +1,46 @@
+[package]
+name = "ruststream-rust-mqtt-bench"
+description = "The code-cost benchmarks of ruststream-rust-mqtt on compio, set beside ruststream-rumqttc's. Never published."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[features]
+default = []
+# A benchmark measures what ships, and the framework's harness feature changes the dispatch path.
+# Nothing here enables this; it exists so that asking for it is the compile error in
+# `benches/common/mod.rs` rather than a number nobody can trust.
+testing = ["ruststream-rust-mqtt/testing"]
+
+# The benchmark lives in its own package so that the measured binary links the framework the way a
+# service does: `ruststream-rust-mqtt`'s own dev-dependencies enable `ruststream/testing`, and a
+# benchmark inside that package would be built against it.
+[dev-dependencies]
+ruststream-rust-mqtt = { workspace = true, features = ["compio"] }
+# The code-cost benchmarks: callgrind and DHAT through gungraun, at the release the sibling pins.
+gungraun = "=0.20.0"
+# What a service needs of the core: the handler macro, the codec the runtime decodes with and the
+# compio runner.
+ruststream = { workspace = true, features = ["macros", "json", "compio"] }
+compio = { workspace = true }
+# The lock of the broker's state on a host: the crate leaves the critical section to the program.
+critical-section = { version = "1.1", features = ["std"] }
+# The feeder is a raw client on a thread of its own, the one the sibling's benchmarks use.
+rumqttc = "0.25"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+serde = { version = "1", features = ["derive"] }
+
+[[bench]]
+name = "consume"
+harness = false
+
+[[bench]]
+name = "reply"
+harness = false
