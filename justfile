@@ -71,14 +71,22 @@ typo:
 
 ci: check test typo security
 
-# A firmware binary for a Cortex-M4F: the broker's embassy surface with a heap, linked for a part
-# with 256 KiB of RAM. The lock is committed and the build takes it as is.
+# The firmware binaries of the two variants, with their sizes. The heap variant is linked for a
+# Cortex-M4F with a global allocator and 256 KiB of RAM. The device variant has no allocator and
+# no `alloc` anywhere in its graph, so it fails to link while a dependency needs a heap; it is
+# linked for a Cortex-M4F and for a Cortex-M0+, which has no compare-and-swap. The locks are
+# committed and the builds take them as they are.
 check-firmware:
     #!/usr/bin/env bash
     set -euo pipefail
     RUSTFLAGS="" cargo build --locked --release --manifest-path checks/firmware/Cargo.toml \
         --target thumbv7em-none-eabihf
     size checks/firmware/target/thumbv7em-none-eabihf/release/ruststream-rust-mqtt-firmware
+    for target in thumbv7em-none-eabihf thumbv6m-none-eabi; do
+        RUSTFLAGS="" cargo build --locked --release \
+            --manifest-path checks/firmware-noalloc/Cargo.toml --target "$target"
+        size "checks/firmware-noalloc/target/$target/release/ruststream-rust-mqtt-firmware-noalloc"
+    done
 
 # What a message costs on the service's core, counted under valgrind: instructions through
 # callgrind and allocations through DHAT, for a consuming service and a replying one on the stand's

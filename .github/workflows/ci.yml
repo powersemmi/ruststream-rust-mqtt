@@ -311,11 +311,12 @@ jobs:
         run: rm -rf "$RUNNER_TEMP/target-floor"
 
   firmware:
-    name: Firmware (Cortex-M4F)
+    name: Firmware (Cortex-M)
     needs: changes
     if: ${{ needs.changes.outputs.rust == 'true' }}
-    # A device build of the broker's embassy surface: a binary that links for a Cortex-M4F with a
-    # heap, the runner as a task over embassy-net, and one subscriber.
+    # A device build of the broker's embassy surface: the heap variant links for a Cortex-M4F with
+    # a global allocator, and the device variant links for a Cortex-M4F and a Cortex-M0+ with none.
+    # Each has the runner as a task over embassy-net and one subscriber.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -325,7 +326,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: thumbv7em-none-eabihf
+          targets: thumbv7em-none-eabihf,thumbv6m-none-eabi
 
       - name: Install just
         uses: taiki-e/install-action@v2.87.31
