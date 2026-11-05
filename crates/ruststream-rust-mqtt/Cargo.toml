@@ -19,22 +19,29 @@ all-features = true
 
 [features]
 default = []
+# The framework's heap variant: the broker runs over the rust-mqtt client, which keeps each field it
+# receives in a heap buffer of its own. Without it the broker is the device variant, which needs no
+# heap: its receive and send buffers are a `static` the board declares.
+alloc = ["ruststream/alloc", "ruststream-core/alloc", "dep:rust-mqtt"]
 # The network of a device: the runner connects through embassy-net's TCP socket.
 embassy = ["ruststream/embassy", "dep:embassy-net", "dep:embassy-time"]
 # The network of a host on the compio runtime: the broker starts its runner on the core that
-# connects it, over compio's TCP stream.
-compio = ["ruststream/compio", "dep:compio"]
-# The in-process transport the test harness connects the broker through.
-testing = ["ruststream/testing"]
+# connects it, over compio's TCP stream. The host build is the heap variant.
+compio = ["alloc", "ruststream/compio", "dep:compio"]
+# The in-process transport the test harness connects the broker through. Under the device variant
+# its bookkeeping (the publish log, the retained messages) is the harness's own and lives on the
+# heap of the test binary, inside a section the harness's allocation check lets through.
+testing = ["ruststream/testing", "dep:assert_no_alloc"]
 
 [dependencies]
-# The framework's heap variant: the client keeps every field it receives in a heap buffer of its
-# own, so the crate turns `alloc` on for the whole build.
-ruststream = { workspace = true, features = ["alloc"] }
+ruststream.workspace = true
 # The contract crate, for the pieces of the family's machinery the facade does not re-export: the
-# type that picks a lock by the `send` feature, and the diagnostics macros.
-ruststream-core = { workspace = true, features = ["alloc"] }
-rust-mqtt = { workspace = true, features = ["v5", "alloc"] }
+# type that picks a lock by the `send` feature, the diagnostics macros, and the variant of the build.
+ruststream-core.workspace = true
+rust-mqtt = { workspace = true, features = ["v5", "alloc"], optional = true }
+# The protocol of the device variant: packets decode as views over the broker's own receive buffer
+# and encode into its send buffer, with no allocation.
+zzq-proto.workspace = true
 embedded-io-async.workspace = true
 embassy-sync.workspace = true
 embassy-futures.workspace = true
@@ -44,9 +51,12 @@ thiserror.workspace = true
 embassy-net = { workspace = true, optional = true }
 embassy-time = { workspace = true, optional = true }
 compio = { workspace = true, optional = true }
+# Lets the harness's own bookkeeping allocate inside a device-variant test that fails every
+# allocation of the framework.
+assert_no_alloc = { version = "1.1.2", optional = true }
 
 [dev-dependencies]
-ruststream = { workspace = true, features = ["testing", "macros", "json", "embassy", "conformance"] }
+ruststream = { workspace = true, features = ["alloc", "testing", "macros", "json", "embassy", "conformance"] }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time", "net", "test-util"] }
 # The live suites run the runner on tokio, over a TCP stream the adapter lends embedded-io.

@@ -19,10 +19,10 @@ use rust_mqtt::types::PacketIdentifier;
 use ruststream::HeaderMap;
 use ruststream_core::IfSend;
 
-use crate::config::MqttConfig;
-use crate::error::MqttError;
+use crate::heap::config::MqttConfig;
+use crate::heap::error::MqttError;
+use crate::heap::routes::Routes;
 use crate::qos::Qos;
-use crate::routes::Routes;
 
 /// The lock every shared piece takes: a critical section next to a multi-thread runtime, nothing
 /// on a single-threaded one.

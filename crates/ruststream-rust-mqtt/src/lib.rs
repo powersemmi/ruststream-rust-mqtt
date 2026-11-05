@@ -59,43 +59,53 @@
 //! ```
 
 #![cfg_attr(not(feature = "compio"), no_std)]
-// Without a multi-thread runtime the broker's state is shared by `Rc`, so its futures are not
-// `Send` by design.
+// Without a multi-thread runtime the broker's state is shared by `Rc` or by a `static`, so its
+// futures are not `Send` by design.
 #![allow(clippy::future_not_send)]
 
+#[cfg(any(feature = "alloc", feature = "testing"))]
 extern crate alloc;
 
-mod broker;
-#[cfg(feature = "compio")]
-mod compio;
-mod config;
+// The framework holds one variant per build: a device build whose framework turned `alloc` on
+// through another crate needs this crate's heap variant too.
+#[cfg(all(ruststream_alloc, not(feature = "alloc")))]
+compile_error!(
+    "the framework is the heap variant in this build (a feature such as `json` turned `alloc` on): \
+     enable the `alloc` feature of ruststream-rust-mqtt as well"
+);
+
 #[cfg(feature = "embassy")]
 mod embassy;
-mod error;
-#[cfg(feature = "testing")]
-mod in_process;
-mod link;
-mod message;
+mod endpoint;
+#[cfg(not(feature = "alloc"))]
+mod fixed;
+#[cfg(feature = "alloc")]
+mod heap;
+mod network;
+mod options;
 pub mod prelude;
-mod publisher;
 mod qos;
-mod queue;
-mod routes;
-mod runner;
-mod source;
-mod subscriber;
 mod topic;
 
-pub use broker::{ClosedMqttBroker, ConnectedMqttBroker, MqttBroker};
-#[cfg(feature = "compio")]
-pub use compio::{CompioNetwork, CompioStream};
-pub use config::MqttConfig;
 #[cfg(feature = "embassy")]
 pub use embassy::{EmbassyConnectError, EmbassyNetwork};
-pub use error::MqttError;
-pub use message::{MqttMessage, PARTITION_KEY_HEADER};
-pub use publisher::{MqttPublish, MqttPublishOptions, MqttPublishSteps, MqttPublisher};
+#[cfg(not(feature = "alloc"))]
+pub use fixed::{
+    ClosedMqttBroker, ConnectedMqttBroker, MqttBatch, MqttBroker, MqttConfig, MqttError,
+    MqttFilter, MqttMessage, MqttPublish, MqttPublisher, MqttRunner, MqttState, MqttSubscriber,
+    MqttTopic,
+};
+#[cfg(feature = "compio")]
+pub use heap::compio::{CompioNetwork, CompioStream};
+#[cfg(feature = "alloc")]
+pub use heap::{
+    ClosedMqttBroker, ConnectedMqttBroker, MqttBroker, MqttConfig, MqttError, MqttFilter,
+    MqttMessage, MqttPublish, MqttPublisher, MqttRunner, MqttSubscriber, MqttTopic,
+};
+pub use network::Network;
+pub use options::{MqttPublishOptions, MqttPublishSteps};
 pub use qos::Qos;
-pub use runner::{MqttRunner, Network};
-pub use source::{MqttFilter, MqttTopic};
-pub use subscriber::MqttSubscriber;
+
+/// The header a delivery's partition key is read from: a publisher that wants per-key ordering
+/// in keyed workers sets it as a user property.
+pub const PARTITION_KEY_HEADER: &str = "partition-key";

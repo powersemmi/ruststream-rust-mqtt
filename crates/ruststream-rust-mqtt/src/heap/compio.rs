@@ -18,7 +18,8 @@ use compio::net::TcpStream;
 use compio::runtime::JoinHandle;
 use embedded_io_async::{ErrorKind, ErrorType, Read, Write};
 
-use crate::runner::{MqttRunner, Network};
+use crate::heap::runner::MqttRunner;
+use crate::network::Network;
 
 /// How many bytes one read of the stream takes at most.
 const READ_BUFFER: usize = 16 * 1024;
