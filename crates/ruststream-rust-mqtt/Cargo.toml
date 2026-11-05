@@ -15,7 +15,9 @@ categories = ["embedded", "no-std", "network-programming"]
 autotests = false
 
 [package.metadata.docs.rs]
-all-features = true
+# The device variant is the crate's primary form, so the published documentation is built
+# without `alloc`; the heap variant's items are documented on the site.
+features = ["embassy", "testing"]
 
 [features]
 default = []
@@ -64,6 +66,7 @@ embedded-io-adapters = { version = "0.7", features = ["tokio-1"] }
 # The lock of the broker's state next to the harness's multi-thread runtime, on a host.
 critical-section = { version = "1.1", features = ["std"] }
 futures = "0.3"
+static_cell = "2"
 # The task `#[ruststream::app(runtime = embassy)]` generates, on the host the tests run on.
 embassy-executor = { version = "0.10", features = ["platform-std", "executor-thread"] }
 embassy-futures.workspace = true

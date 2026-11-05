@@ -144,6 +144,11 @@ jobs:
         run: |
           cargo clippy --locked --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features -- -D warnings
           cargo clippy --locked -p ruststream-rust-mqtt-bench --all-targets -- -D warnings
+          cargo clippy --locked --manifest-path checks/noalloc/Cargo.toml --all-targets -- -D warnings
+
+      - name: cargo fmt (device variant suites)
+        if: "!cancelled() && env.RUST_CHANGED == 'true'"
+        run: cargo fmt --manifest-path checks/noalloc/Cargo.toml -- --check
 
       # The benchmark package is left out of the all-features legs on purpose: it is built with the
       # feature set a service ships, and the framework's harness feature is a compile error in it.
@@ -192,6 +197,7 @@ jobs:
           cargo check --locked -p ruststream-rust-mqtt-bench --all-targets
           cargo test --locked --workspace --all-features --no-fail-fast --tests
           cargo test --locked --workspace --all-features --no-fail-fast --doc
+          cargo test --locked --manifest-path checks/noalloc/Cargo.toml --no-fail-fast
 
       - name: Delete the minimal versions build
         if: always()
@@ -233,7 +239,9 @@ jobs:
       - name: cargo doc
         env:
           RUSTDOCFLAGS: -D warnings
-        run: cargo doc --locked --workspace --all-features --no-deps
+        run: |
+          cargo doc --locked --workspace --all-features --no-deps
+          cargo doc --locked -p ruststream-rust-mqtt --features embassy,testing --no-deps
 
       - name: cargo check (no default features)
         run: cargo check --locked --workspace --no-default-features
@@ -366,7 +374,9 @@ jobs:
           # env block would leave this job green having asserted nothing. With this set, a
           # missing URL fails the suite instead of skipping it.
           RUSTSTREAM_REQUIRE_LIVE: "1"
-        run: cargo test --locked -p ruststream-rust-mqtt --all-features --tests -- --test-threads=1
+        run: |
+          cargo test --locked -p ruststream-rust-mqtt --all-features --tests -- --test-threads=1
+          cargo test --locked --manifest-path checks/noalloc/Cargo.toml --tests -- --test-threads=1
 
       - name: Cleanup
         if: always()

@@ -12,16 +12,22 @@ check:
     # Its own leg follows each of them.
     cargo clippy --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features -- -D warnings
     cargo clippy -p ruststream-rust-mqtt-bench --all-targets -- -D warnings
+    # The device variant builds without `alloc`, which the crate's own dev-dependencies turn on, so
+    # its sources are linted and tested from a workspace of their own.
+    cargo fmt --manifest-path checks/noalloc/Cargo.toml -- --check
+    cargo clippy --manifest-path checks/noalloc/Cargo.toml --all-targets -- -D warnings
     cargo check --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features
     cargo check -p ruststream-rust-mqtt-bench --all-targets
     cargo check --workspace --no-default-features
     # CI denies rustdoc warnings, so a broken intra-doc link fails the build. Running it here is
     # what keeps that a local finding rather than a red pull request.
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
+    RUSTDOCFLAGS="-D warnings" cargo doc -p ruststream-rust-mqtt --features embassy,testing --no-deps
 
 test:
     cargo test --workspace --all-features --tests
     cargo test --workspace --all-features --doc
+    cargo test --manifest-path checks/noalloc/Cargo.toml
 
 # The live stand: mosquitto with an anonymous and an authenticated listener.
 brokers-up:
@@ -41,6 +47,11 @@ test-brokers: brokers-up
     MQTT_TEST_AUTH_PASSWORD=s3cret \
     RUSTSTREAM_REQUIRE_LIVE=1 \
         cargo test --workspace --all-features --tests -- --test-threads=1
+    MQTT_TEST_URL=mqtt://127.0.0.1:1893 \
+    MQTT_TEST_AUTH_URL=mqtt://127.0.0.1:1894 \
+    MQTT_TEST_AUTH_PASSWORD=s3cret \
+    RUSTSTREAM_REQUIRE_LIVE=1 \
+        cargo test --manifest-path checks/noalloc/Cargo.toml --tests -- --test-threads=1
 
 fmt:
     cargo fmt --all

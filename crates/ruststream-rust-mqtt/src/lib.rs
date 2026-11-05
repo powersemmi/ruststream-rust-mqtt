@@ -1,5 +1,16 @@
-//! An MQTT 5 broker for RustStream over the [rust-mqtt](https://docs.rs/rust-mqtt) client, for
-//! devices on the embassy runtime and for hosts on the compio runtime.
+//! An MQTT 5 broker for RustStream, for devices on the embassy runtime and for hosts on the compio
+//! runtime.
+//!
+//! The crate has two variants, which follow the framework's own:
+//!
+//! - The device variant, the default: no heap. The board declares the broker's memory, an
+//!   `MqttState` of fixed size, as a `static`. A delivery holds the receive buffer its PUBLISH
+//!   arrived in and borrows its topic and payload from it, and a publish is encoded straight into
+//!   a send buffer. The crate speaks the protocol itself through the `zzq-proto` codec.
+//! - The heap variant, with the `alloc` feature (which `compio` turns on): the broker runs over the
+//!   rust-mqtt client, and its settings and descriptors hold owned strings.
+//!
+//! The items:
 //!
 //! - [`MqttBroker`], [`ConnectedMqttBroker`], [`ClosedMqttBroker`]: the broker's lifecycle.
 //!   [`MqttBroker::new`] returns the broker with the [`MqttRunner`] that owns its connection; a
@@ -15,22 +26,20 @@
 //!   (feature `embassy`) and over compio (feature `compio`).
 //! - [`prelude`]: the crate's types beside the framework's prelude.
 //!
-//! The crate builds the framework's `alloc` variant: the client, rust-mqtt 0.6, gives each field it
-//! receives a heap buffer of its own, so a delivery holds two of them, its topic and its payload,
-//! moved in without a copy.
-//!
 //! # Examples
 //!
-//! A device service: the board builds the broker and its runner, spawns the runner's task, and
-//! hands the broker to the app.
+//! A device service: the board declares the broker's memory, builds the broker and its runner,
+//! spawns the runner's task, and hands the broker to the app.
 //!
 //! ```
+//! # #[cfg(not(feature = "alloc"))]
 //! # mod demo {
 //! use ruststream::runtime::{EmbeddedApp, HandlerOutcome, Mounts};
 //! use ruststream::{Deserialized, subscriber};
-//! use ruststream_rust_mqtt::{MqttBroker, MqttConfig, MqttRunner, MqttTopic, Network};
+//! use ruststream_rust_mqtt::{MqttBroker, MqttConfig, MqttRunner, MqttState, MqttTopic, Network};
+//! use static_cell::ConstStaticCell;
 //!
-//! /// A reading as the sensor sends its bytes.
+//! /// A reading as the sensor sends its bytes, borrowed from the broker's receive buffer.
 //! #[derive(Deserialized)]
 //! struct Reading<'a>(&'a [u8]);
 //!
@@ -45,6 +54,9 @@
 //!     EmbeddedApp::new().with_broker(broker, |b| b.include(on_reading))
 //! }
 //!
+//! /// The broker's memory: four deliveries of up to 1 KiB, and eight subscriptions.
+//! static MQTT: ConstStaticCell<MqttState> = ConstStaticCell::new(MqttState::new());
+//!
 //! /// The body of the board's MQTT task.
 //! pub async fn mqtt(runner: MqttRunner, network: impl Network) -> ! {
 //!     runner.run(network).await
@@ -52,7 +64,22 @@
 //!
 //! /// What `main` does before it spawns the two tasks.
 //! pub fn board() -> (MqttBroker, MqttRunner) {
-//!     MqttBroker::new(MqttConfig::new("192.168.1.10:1883").client_id("sensor-7"))
+//!     MqttBroker::new(MQTT.take(), MqttConfig::new("192.168.1.10:1883").client_id("sensor-7"))
+//! }
+//! # }
+//! # fn main() {}
+//! ```
+//!
+//! A host service on compio builds the heap variant, and the broker starts its runner itself:
+//!
+//! ```
+//! # #[cfg(feature = "compio")]
+//! # mod demo {
+//! use ruststream_rust_mqtt::{MqttBroker, MqttConfig};
+//!
+//! /// The gateway's broker; the app connects it on the core that runs it.
+//! pub fn broker() -> MqttBroker {
+//!     MqttBroker::compio(MqttConfig::new("mqtt://broker.local:1883").client_id("gateway"))
 //! }
 //! # }
 //! # fn main() {}

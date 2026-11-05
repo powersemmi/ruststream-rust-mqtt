@@ -7,8 +7,8 @@ use crate::qos::Qos;
 
 /// The two settings MQTT carries on every PUBLISH packet, as one message asked for them.
 ///
-/// This is [`Publisher::Options`] of every publisher this crate hands out. A setting left unset
-/// keeps what the [`MqttPublish`] policy fixed at the mount site, so a call carries only what it
+/// This is [`Publisher::Options`](ruststream::Publisher::Options) of every publisher this crate hands out. A setting left unset
+/// keeps what the [`MqttPublish`](crate::MqttPublish) policy fixed at the mount site, so a call carries only what it
 /// changed. A service writes [the steps](MqttPublishSteps) rather than this type; a test names it
 /// to assert what a publish carried.
 ///
@@ -56,7 +56,7 @@ impl MqttPublishOptions {
 ///
 /// Both settings MQTT carries on a PUBLISH packet are reopened at the call site:
 /// `out.message(&state).retain(true).publish()`. The bound is on the sink's
-/// [options type](Publisher::Options), so these steps appear on a builder over an MQTT publisher
+/// [options type](ruststream::Publisher::Options), so these steps appear on a builder over an MQTT publisher
 /// and on no other broker's. A handler body that takes one imports this crate's prelude and
 /// bounds its slot with `Out<impl Publisher<Options = MqttPublishOptions>, Marker>`.
 ///
