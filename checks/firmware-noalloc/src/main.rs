@@ -72,9 +72,7 @@ async fn radio(mut runner: RadioRunner<'static, MTU>) -> ! {
 }
 
 #[embassy_executor::task]
-async fn network(
-    mut runner: embassy_net::Runner<'static, channel::Device<'static, MTU>>,
-) -> ! {
+async fn network(mut runner: embassy_net::Runner<'static, channel::Device<'static, MTU>>) -> ! {
     runner.run().await
 }
 
@@ -104,8 +102,12 @@ async fn main(spawner: Spawner) {
         gateway: Some(Ipv4Address::new(192, 168, 1, 1)),
         dns_servers: heapless::Vec::new(),
     });
-    let (stack, net_runner) =
-        embassy_net::new(device, config, RESOURCES.init(StackResources::new()), 0x5eed);
+    let (stack, net_runner) = embassy_net::new(
+        device,
+        config,
+        RESOURCES.init(StackResources::new()),
+        0x5eed,
+    );
     spawner.spawn(network(net_runner).expect("the task pool holds the network"));
 
     static RX: StaticCell<[u8; 1024]> = StaticCell::new();
