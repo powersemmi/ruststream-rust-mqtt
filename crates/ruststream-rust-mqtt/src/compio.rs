@@ -83,6 +83,7 @@ impl Network for CompioNetwork {
     // The writing task hands the kernel what the client gathered after the client's flush, so
     // the stream waits for its outbox to drain before it goes.
     async fn close(stream: Self::Stream<'_>) {
+        stream.release();
         poll_fn(|cx| {
             let mut held = stream.outbox.borrow_mut();
             if (held.gathered.is_empty() && !held.writing) || held.failed.is_some() {
@@ -151,9 +152,10 @@ async fn read_into(stream: Rc<TcpStream>, pipe: Rc<RefCell<Pipe>>) {
 
 /// What the client has written and the writing task has not handed to the kernel yet.
 ///
-/// Two buffers take turns: the client writes into one while the task's write owns the other, and
-/// the task takes everything gathered at once, so the packets written while a write is in flight
-/// leave in the next one. Each write is one operation of the driver.
+/// Two buffers take turns: the client writes into one while the task's write owns the other. The
+/// bytes leave when the runner has nothing more to write in its pass and waits for the server, so
+/// the packets of one pass (a reply and the acknowledgement of the delivery it answers, the
+/// acknowledgements of a batch) leave in one write. Each write is one operation of the driver.
 #[derive(Default)]
 struct Outbox {
     gathered: Vec<u8>,
@@ -161,6 +163,9 @@ struct Outbox {
     spare: Vec<u8>,
     /// Set while a write is with the kernel.
     writing: bool,
+    /// Set when the gathered bytes are to leave: the runner has nothing more to write in this
+    /// pass (it waits for the server), or the outbox runs full, or the stream closes.
+    released: bool,
     /// Set when a write failed: the client's next write or flush reports it.
     failed: Option<ErrorKind>,
     /// The writing task, waiting for bytes.
@@ -177,13 +182,14 @@ async fn write_from(stream: Rc<TcpStream>, outbox: Rc<RefCell<Outbox>>) {
     loop {
         let gathered = poll_fn(|cx| {
             let mut held = outbox.borrow_mut();
-            if held.gathered.is_empty() {
+            if held.gathered.is_empty() || !held.released {
                 held.writer = Some(cx.waker().clone());
                 return Poll::Pending;
             }
             let spare = std::mem::take(&mut held.spare);
             let gathered = std::mem::replace(&mut held.gathered, spare);
             held.writing = true;
+            held.released = false;
             if let Some(client) = held.client.take() {
                 client.wake();
             }
@@ -230,6 +236,18 @@ impl ErrorType for CompioStream {
 }
 
 impl CompioStream {
+    /// Lets the gathered bytes leave.
+    fn release(&self) {
+        let mut held = self.outbox.borrow_mut();
+        if held.gathered.is_empty() {
+            return;
+        }
+        held.released = true;
+        if let Some(writer) = held.writer.take() {
+            writer.wake();
+        }
+    }
+
     /// Copies what the pipe holds into `buf`; `None` when it holds nothing yet.
     fn take_waiting(&self, buf: &mut [u8]) -> Option<Result<usize, ErrorKind>> {
         let mut held = self.pipe.borrow_mut();
@@ -266,6 +284,8 @@ impl Read for CompioStream {
                 return Poll::Ready(read);
             }
             self.pipe.borrow_mut().client = Some(cx.waker().clone());
+            // The runner waits for the server: what it wrote in this pass leaves now.
+            self.release();
             Poll::Pending
         })
         .await
@@ -294,11 +314,14 @@ impl Write for CompioStream {
             if let Some(failed) = held.failed {
                 return Poll::Ready(Err(failed));
             }
-            if let Some(writer) = held.writer.take() {
-                writer.wake();
+            // The client goes on while the bytes gather; they leave once it waits for the
+            // server, and it waits for them only when it runs this far ahead of the kernel.
+            if held.gathered.len() > GATHER_LIMIT / 2 {
+                held.released = true;
+                if let Some(writer) = held.writer.take() {
+                    writer.wake();
+                }
             }
-            // The client goes on while the task writes; it waits only when it runs this far
-            // ahead of the kernel.
             if held.gathered.len() > GATHER_LIMIT {
                 held.client = Some(cx.waker().clone());
                 return Poll::Pending;
