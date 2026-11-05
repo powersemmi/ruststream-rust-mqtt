@@ -1,8 +1,13 @@
 ---
 sidebar_position: 0
-description: "Где ruststream-rust-mqtt стоит между брокером MQTT и рантаймом RustStream."
+description: "Где ruststream-rust-mqtt находится между брокером MQTT и рантаймом RustStream."
 ---
 
 # Архитектура
 
-Этот раздел показывает, где `ruststream-rust-mqtt` стоит между брокером MQTT и рантаймом RustStream.
+Этот раздел показывает, где `ruststream-rust-mqtt` находится между брокером MQTT и рантаймом
+RustStream.
+
+[Runner и ручки](./runner.md) объясняет, как соединением владеет одна задача, а обработчики,
+издатели и подтверждения обращаются к ней.
+[Во что обходятся доставка и публикация](./cost.md) называет, что каждая из них берёт у устройства.
