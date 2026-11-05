@@ -121,3 +121,35 @@ bench-code *ARGS: brokers-up
     cargo bench -p ruststream-rust-mqtt-bench --no-fail-fast \
         -- --output-format=json "$@" > target/bench-code.json
     python3 scripts/bench_code_table.py --messages "$messages" target/bench-code.json
+
+# What a message costs on the device variant, counted as `bench-code` counts the heap variant's:
+# the same scenarios (consume at QoS 1, reply), the same payload and message count, callgrind and
+# DHAT, built without `alloc` in the workspace of `checks/bench-noalloc` with fat LTO and never the
+# `testing` feature. The stand has to be up already (`just brokers-up`, mosquitto on 1893). Take the
+# machine lock of the benchmarks before running it.
+[positional-arguments]
+bench-code-noalloc *ARGS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    messages=500
+    if [[ "${1:-}" =~ ^[0-9]+$ ]]; then
+        messages="$1"
+        shift
+    fi
+    manifest="$PWD/checks/bench-noalloc/Cargo.toml"
+    version="$(cargo pkgid --manifest-path "$manifest" gungraun)"
+    version="${version##*@}"
+    runner="$PWD/target/gungraun-runner"
+    mkdir -p target
+    installed="$("$runner/bin/gungraun-runner" --version 2> /dev/null || true)"
+    if [ "$installed" != "gungraun-runner $version" ]; then
+        cargo install --locked --root "$runner" gungraun-runner --version "=$version"
+    fi
+    unset GUNGRAUN_RUNNER
+    export PATH="$runner/bin:$PATH" RUSTFLAGS="" RUSTSTREAM_BENCH_MESSAGES="$messages" \
+        GUNGRAUN_HOME="$PWD/target/gungraun-noalloc/$messages" \
+        MQTT_TEST_URL="${MQTT_TEST_URL:-mqtt://127.0.0.1:1893}"
+    cargo bench --manifest-path "$manifest" --no-run
+    cargo bench --manifest-path "$manifest" --no-fail-fast \
+        -- --output-format=json "$@" > target/bench-code-noalloc.json
+    python3 scripts/bench_code_table.py --messages "$messages" target/bench-code-noalloc.json
