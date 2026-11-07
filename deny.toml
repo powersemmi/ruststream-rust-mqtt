@@ -7,6 +7,12 @@ all-features = true
 
 [advisories]
 yanked = "deny"
+ignore = [
+    # pin-utils is unmaintained and has no successor release. It comes only through loom, which
+    # compio-executor names under `cfg(loom)`: no build of this crate sets that cfg, so loom and
+    # pin-utils are never compiled.
+    { id = "RUSTSEC-2026-0441", reason = "pin-utils comes only through loom, a cfg(loom) dependency of compio-executor that no build compiles" },
+]
 
 [licenses]
 # Apache-2.0/MIT-compatible permissive licenses only.
