@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 title: 在设备上入门
-description: "设备服务没有堆：处理器从 Broker 的接收缓冲区借用载荷，Broker 的内存是 static，开发板的 main 启动 runner 和应用。"
+description: "设备服务没有堆：处理器从接收缓冲区借用载荷，Broker 的内存是 static，main 启动 runner 和应用。"
 ---
 
 import Tabs from '@theme/Tabs';

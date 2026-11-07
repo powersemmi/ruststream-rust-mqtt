@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 title: Testing a device service
-description: "A device service is tested on the host with the embedded TestApp over the memory the test declares, a compio service with the compio TestApp; both connect the broker in process."
+description: "A device service is tested on the host with the embedded TestApp, a compio service with the compio TestApp; both connect the broker in process."
 ---
 
 import Tabs from '@theme/Tabs';

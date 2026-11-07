@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 title: Первый сервис на хосте compio
-description: "На хосте compio брокер это вариант с кучей, а MqttBroker::compio запускает runner на ядре, которое подключает брокер, поэтому сервис состоит из обработчика и приложения."
+description: "На хосте compio брокер это вариант с кучей, а MqttBroker::compio запускает runner на ядре, которое его подключает, так что сервис - обработчик и приложение."
 ---
 
 import Tabs from '@theme/Tabs';

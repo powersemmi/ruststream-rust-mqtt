@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 title: What a delivery and a publish cost
-description: "On a device a delivery borrows the receive buffer its packet arrived in and a publish is encoded into a send buffer, with no allocation; the heap variant takes a heap buffer for each field."
+description: "On a device a delivery borrows the receive buffer and a publish encodes into a send buffer, with no allocation; the heap variant allocates a buffer per field."
 ---
 
 # What a delivery and a publish cost

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 title: 测试设备服务
-description: "设备服务在主机上用 embedded TestApp 在测试自己声明的内存之上测试，compio 服务用 compio TestApp 测试；二者都在进程内连接 Broker。"
+description: "设备服务在主机上用 embedded TestApp 测试，compio 服务用 compio TestApp 测试；二者都在进程内连接 Broker。"
 ---
 
 import Tabs from '@theme/Tabs';

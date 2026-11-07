@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 title: 在 compio 主机上入门
-description: "在 compio 主机上，Broker 是堆变体，MqttBroker::compio 在连接 Broker 的核心上启动 runner，因此服务只需要处理器和应用。"
+description: "在 compio 主机上，Broker 是堆变体，MqttBroker::compio 在连接它的核心上启动 runner，因此服务由处理器和应用组成。"
 ---
 
 import Tabs from '@theme/Tabs';

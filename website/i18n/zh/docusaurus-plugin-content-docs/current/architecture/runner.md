@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 title: Runner 与句柄
-description: "一个任务，即 runner，持有连接；服务的句柄通过一开始就存在的 Broker 内存与它通信，设备把每个报文读入接收缓冲区，投递再借用该缓冲区。"
+description: "一个任务，即 runner，持有连接；服务的句柄通过 Broker 的内存与它通信，设备把每个报文读入投递所借用的缓冲区。"
 ---
 
 # Runner 与句柄

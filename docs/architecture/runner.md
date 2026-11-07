@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 title: The runner and the handles
-description: "One task, the runner, owns the connection; the handles of the service reach it through the broker's memory, which exists from the start, and a device reads each packet into a receive buffer the delivery then borrows."
+description: "One task, the runner, owns the connection; handles reach it through the broker's memory, and a device reads each packet into a buffer the delivery borrows."
 ---
 
 # The runner and the handles

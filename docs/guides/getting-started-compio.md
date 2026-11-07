@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 title: Getting started on a compio host
-description: "On a compio host the broker is the heap variant, and MqttBroker::compio starts the runner on the core that connects the broker, so the service is the handler and the app."
+description: "On a compio host the broker is the heap variant, and MqttBroker::compio starts the runner on the core that connects it, so the service is a handler and an app."
 ---
 
 import Tabs from '@theme/Tabs';

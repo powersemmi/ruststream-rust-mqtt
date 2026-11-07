@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 title: Getting started on a device
-description: "A device service has no heap: the handler borrows its payload from the broker's receive buffer, the broker's memory is a static, and the board's main spawns the runner and the app."
+description: "A device service has no heap: the handler borrows its payload from the receive buffer, the broker's memory is a static, and main spawns the runner and the app."
 ---
 
 import Tabs from '@theme/Tabs';

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 0
 title: MqttBroker
-description: "MqttBroker connects a service to an MQTT 5 server over the memory the board declares, and its runner owns the connection; a device spawns the runner as a task of its own."
+description: "MqttBroker connects a service to an MQTT 5 server over the memory the board declares; its runner owns the connection, and a device spawns it as a task."
 ---
 
 import Tabs from '@theme/Tabs';
