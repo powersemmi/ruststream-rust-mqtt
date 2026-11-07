@@ -9,11 +9,11 @@ use core::task::{Context, Poll};
 use futures_core::Stream;
 use ruststream::{BatchStream, BatchSubscriber, ReadyHint, Subscriber};
 
-use crate::error::MqttError;
-use crate::link::{Link, Shared};
-use crate::message::MqttMessage;
-use crate::queue::Queue;
-use crate::routes::Member;
+use crate::heap::error::MqttError;
+use crate::heap::link::{Link, Shared};
+use crate::heap::message::MqttMessage;
+use crate::heap::queue::Queue;
+use crate::heap::routes::Member;
 
 /// One subscription of an [`MqttBroker`](crate::MqttBroker): the stream of the deliveries the
 /// server sends for it.
@@ -54,7 +54,7 @@ pub struct MqttSubscriber {
 pub(crate) enum Detach {
     Wire(Shared<Link>, Member),
     #[cfg(feature = "testing")]
-    Local(Shared<crate::in_process::Bus>, Member),
+    Local(Shared<crate::heap::in_process::Bus>, Member),
 }
 
 impl fmt::Debug for MqttSubscriber {

@@ -5,10 +5,8 @@ use alloc::format;
 use alloc::string::String;
 use core::time::Duration;
 
-use crate::error::MqttError;
-
-/// The port an `mqtt://` address without one connects to.
-const DEFAULT_PORT: u16 = 1883;
+use crate::endpoint::{EndpointError, split};
+use crate::heap::error::MqttError;
 
 /// The keep-alive a broker asks for unless the configuration names another.
 const DEFAULT_KEEP_ALIVE: Duration = Duration::from_secs(60);
@@ -145,36 +143,17 @@ impl MqttConfig {
     /// [`MqttError::Connect`] where the address carries a scheme other than `mqtt`, or a port
     /// that is not a number.
     pub(crate) fn endpoint(&self) -> Result<(&str, u16), MqttError> {
-        let refused = |reason: &str| MqttError::Connect {
+        split(&self.address).map_err(|error| MqttError::Connect {
             address: self.address.clone(),
-            reason: reason.to_owned(),
-        };
-        let rest = match self.address.split_once("://") {
-            Some(("mqtt", rest)) => rest,
-            Some((scheme, _)) => {
-                return Err(refused(&format!(
+            reason: match error {
+                EndpointError::Scheme(scheme) => format!(
                     "the scheme {scheme:?} is not one this broker connects with: write \
                      mqtt://host:port or host:port"
-                )));
-            }
-            None => self.address.as_str(),
-        };
-        let rest = rest.trim_end_matches('/');
-        // An IPv6 literal keeps its colons inside brackets.
-        let (host, port) = match rest.rsplit_once(':') {
-            Some((host, port)) if !host.ends_with(':') && !port.ends_with(']') => {
-                let port = port
-                    .parse()
-                    .map_err(|_| refused("the port is not a number from 0 to 65535"))?;
-                (host, port)
-            }
-            _ => (rest, DEFAULT_PORT),
-        };
-        let host = host.trim_start_matches('[').trim_end_matches(']');
-        if host.is_empty() {
-            return Err(refused("the address names no host"));
-        }
-        Ok((host, port))
+                ),
+                EndpointError::Port => "the port is not a number from 0 to 65535".to_owned(),
+                EndpointError::NoHost => "the address names no host".to_owned(),
+            },
+        })
     }
 }
 

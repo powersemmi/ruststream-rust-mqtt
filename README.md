@@ -1,7 +1,7 @@
 <h1 align="center">ruststream-rust-mqtt</h1>
 
 <p align="center">
-  <i>The MQTT 5 broker of the <a href="https://github.com/powersemmi/ruststream">RustStream</a> messaging framework over the <code>rust-mqtt</code> client, for the embassy and compio runtimes.</i>
+  <i>The MQTT 5 broker of the <a href="https://github.com/powersemmi/ruststream">RustStream</a> messaging framework: no heap on a device with embassy, and a host on compio.</i>
 </p>
 
 <p align="center">
@@ -14,12 +14,20 @@
 
 ---
 
-`ruststream-rust-mqtt` connects a RustStream service to an MQTT 5 server over
-[`rust-mqtt`](https://crates.io/crates/rust-mqtt). Handlers, routing, codecs and middleware come
-from the framework; this crate is the transport.
+`ruststream-rust-mqtt` connects a RustStream service to an MQTT 5 server. Handlers, routing, codecs
+and middleware come from the framework; this crate is the transport.
+
+On a device the crate needs no heap. The board declares the broker's memory as a `static`, a PUBLISH
+is read straight into a receive buffer of it, and the handler borrows its payload from that buffer.
+A host on compio, or a device that has a heap, takes the heap variant over the
+[`rust-mqtt`](https://crates.io/crates/rust-mqtt) client.
 
 ## Features
 
+- **No heap on a device:** `MqttState<MESSAGES, PACKET, SUBSCRIPTIONS>` is every buffer the broker
+  owns, as one value of known size. Nothing is allocated, at startup or per message.
+- **Deliveries that borrow:** a handler reads its payload as bytes borrowed from the receive
+  buffer, and a reply is encoded straight into a send buffer.
 - **Two runtimes:** a device on embassy, where the connection's `MqttRunner` is a task of the board
   over `EmbassyNetwork`, and a host on compio, where `MqttBroker::compio` starts the runner itself.
 - **A `Network` of the board's own:** the runner connects over any link that reads and writes
@@ -39,67 +47,97 @@ from the framework; this crate is the transport.
 - **Tests run the production app** (feature `testing`): the embedded and the compio `TestApp`
   connect `MqttBroker` in process, with no server.
 
+## Cargo features
+
+All are off by default.
+
+| Feature   | Adds |
+| --------- | ---- |
+| `embassy` | `EmbassyNetwork`, the runner's network over an embassy-net stack. |
+| `alloc`   | The heap variant: the broker runs over the `rust-mqtt` client and its settings hold owned strings. |
+| `compio`  | `CompioNetwork` and `MqttBroker::compio` for a host on compio; implies `alloc`. |
+| `testing` | The in-process transport the embedded and the compio `TestApp` connect. |
+
 ## Install
 
 ```toml
 [dependencies]
-# A device on embassy.
-ruststream = { version = "0.8", default-features = false, features = ["embassy", "macros", "json"] }
+# A device on embassy, without a heap.
+ruststream = { version = "0.8", default-features = false, features = ["embassy", "macros"] }
 ruststream-rust-mqtt = { version = "0.8", features = ["embassy"] }
+static_cell = "2"
 
 [dev-dependencies]
-ruststream-rust-mqtt = { version = "0.8", features = ["testing"] }
+ruststream-rust-mqtt = { version = "0.8", features = ["embassy", "testing"] }
 ```
 
 A compio host takes `features = ["compio", "macros", "json"]` on `ruststream` and
-`features = ["compio"]` on this crate.
+`features = ["compio"]` on this crate. A device that has a heap takes `features = ["alloc", "embassy"]`
+on this crate and the `alloc` feature on `ruststream`.
 
 ## Write a device service
 
 ```rust
 use embassy_executor::Spawner;
 use embassy_net::Stack;
-use ruststream::Outgoing;
+use ruststream::{Deserialized, Outgoing, Serialized};
 use ruststream_rust_mqtt::prelude::*;
-use ruststream_rust_mqtt::{EmbassyNetwork, MqttRunner};
-use serde::{Deserialize, Serialize};
+use ruststream_rust_mqtt::{EmbassyNetwork, MqttRunner, MqttState};
+use static_cell::ConstStaticCell;
 
-#[derive(Debug, PartialEq, Deserialize, Serialize, Outgoing)]
-#[outgoing(name = "sensors/temp")]
-struct Reading {
-    celsius: i16,
-}
+/// A command as the controller sends its bytes, borrowed from the broker's receive buffer.
+#[derive(Deserialized)]
+struct Command<'a>(&'a [u8]);
 
-/// Takes every reading the sensors publish.
-#[subscriber(MqttTopic::new("sensors/temp"))]
-async fn store(reading: &Reading) -> HandlerOutcome {
-    let _ = reading.celsius;
-    HandlerOutcome::ack()
+/// The state the valve reports, as the bytes that leave.
+#[derive(Outgoing, Serialized)]
+#[outgoing(name = "valves/v1/state")]
+struct State(&'static [u8]);
+
+/// Moves the valve and reports where it is.
+#[subscriber(MqttTopic::new("valves/v1/set"), reply)]
+async fn set(command: &Command<'_>) -> State {
+    match command.0 {
+        b"open" => State(b"opened"),
+        _ => State(b"closed"),
+    }
 }
 
 #[ruststream::app(runtime = embassy)]
-pub fn app(broker: MqttBroker) -> EmbeddedApp<impl Mounts> {
-    EmbeddedApp::new().with_broker(broker, |b| b.include(store))
+fn app(broker: MqttBroker) -> EmbeddedApp<impl Mounts> {
+    EmbeddedApp::new().with_broker(broker, |b| b.include(set).out_reply(MqttPublish::default()))
 }
+
+/// The broker's memory: four deliveries of up to 1 KiB, and eight subscriptions.
+static MQTT: ConstStaticCell<MqttState> = ConstStaticCell::new(MqttState::new());
 
 /// The runner owns the connection, and the app starts only while it runs.
 #[embassy_executor::task]
 async fn mqtt(runner: MqttRunner, stack: Stack<'static>) -> ! {
     let mut rx = [0; 1024];
     let mut tx = [0; 1024];
-    runner.run(EmbassyNetwork::new(stack, &mut rx, &mut tx)).await
+    runner
+        .run(EmbassyNetwork::new(stack, &mut rx, &mut tx))
+        .await
 }
 
 /// What the board's `main` does once its network stack is up.
 fn start(spawner: Spawner, stack: Stack<'static>) {
-    let config = MqttConfig::new("192.168.1.10:1883").client_id("sensor-7");
-    let (broker, runner) = MqttBroker::new(config);
+    let config = MqttConfig::new("192.168.1.10:1883").client_id("valve-1");
+    let (broker, runner) = MqttBroker::new(MQTT.take(), config);
     spawner.spawn(mqtt(runner, stack).expect("the pool holds the runner's task"));
     spawner.spawn(app::task(broker).expect("the pool holds the app's task"));
 }
 ```
 
+`MqttState<MESSAGES, PACKET, SUBSCRIPTIONS>` fixes the memory: how many deliveries are held at once
+(default 4), the largest packet in bytes (1024) and how many subscriptions are open (8). The memory
+is about `(MESSAGES + 2) * PACKET` bytes. While every receive buffer is held, the runner stops
+reading the connection.
+
 ## Write a compio service
+
+The heap variant: the broker starts its runner on the core that connects it.
 
 ```rust
 use ruststream::Outgoing;
@@ -132,22 +170,31 @@ fn app() -> impl App {
 ## Test it
 
 The embedded `TestApp` runs the device service on the host with `MqttBroker` in process, with no
-server and no runner:
+server and no runner. The test declares its own memory, as the board does:
 
 ```rust
 use ruststream::testing::embedded::TestApp;
 
-embassy_futures::block_on(async {
-    let (broker, _runner) = MqttBroker::new(MqttConfig::new("192.168.1.10:1883"));
-    let tb = TestApp::start(app(broker)).await?;
-    let sensor = tb.broker::<MqttBroker>();
-    sensor.message(&Reading { celsius: 21 }).publish().await?;
+#[derive(Outgoing, Serialized)]
+struct Sent(&'static [u8]);
 
-    sensor
-        .subscriber("sensors/temp")
+static MEMORY: ConstStaticCell<MqttState> = ConstStaticCell::new(MqttState::new());
+
+embassy_futures::block_on(async {
+    let (broker, _runner) = MqttBroker::new(MEMORY.take(), MqttConfig::new("192.168.1.10:1883"));
+    let tb = TestApp::start(app(broker)).await?;
+    let valve = tb.broker::<MqttBroker>();
+    valve.message(&Sent(b"open")).to("valves/v1/set").publish().await?;
+
+    valve
+        .subscriber("valves/v1/set")
         .assert_called_once()
-        .with(&Reading { celsius: 21 })
+        .with_raw(b"open")
         .settled(HandlerOutcome::ack());
+    valve
+        .published::<()>("valves/v1/state")
+        .assert_called_once()
+        .with_raw(b"opened");
     tb.shutdown().await?;
     Ok::<_, Box<dyn std::error::Error>>(())
 })

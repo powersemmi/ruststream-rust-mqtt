@@ -1,5 +1,6 @@
 //! [`Qos`], the delivery guarantee of a subscription or a publish.
 
+#[cfg(feature = "alloc")]
 use rust_mqtt::types::QoS;
 
 /// The quality of service of a subscription or a publish.
@@ -30,6 +31,7 @@ pub enum Qos {
 }
 
 impl Qos {
+    #[cfg(feature = "alloc")]
     pub(crate) const fn to_client(self) -> QoS {
         match self {
             Self::AtMostOnce => QoS::AtMostOnce,
@@ -39,7 +41,7 @@ impl Qos {
     }
 
     /// The lesser of two qualities of service, the one a server delivers at.
-    #[cfg(feature = "testing")]
+    #[cfg(all(feature = "testing", feature = "alloc"))]
     pub(crate) fn lesser(self, other: Self) -> Self {
         self.min(other)
     }

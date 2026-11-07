@@ -11,6 +11,10 @@ import TabItem from '@theme/TabItem';
 
 [`MqttConfig`](api:ruststream_rust_mqtt::MqttConfig) holds where the broker connects and as whom: the address, the client id, the keep-alive, the credentials and the session.
 
+On a device every text is a `&'static str`, so the settings hold no buffer of their own and the firmware keeps them in a `const`.
+The password is the device's own: the firmware reads it when it boots and adds it to the constant.
+On the heap variant the texts are owned, and the service takes the password the deployment hands it when it starts.
+
 Building a config performs no I/O.
 The address is read when the broker connects, and a value the broker cannot connect to is reported there as [`MqttError::Connect`](api:ruststream_rust_mqtt::MqttError::Connect).
 It is `host:port` or `mqtt://host[:port]`, with the port defaulting to 1883, and an IPv6 literal keeps its brackets.
@@ -27,6 +31,15 @@ The server then redelivers the QoS 1 and QoS 2 messages that a previous connecti
 ## Example
 
 The server on the plant network, as the valve `valve-1`, with a session the server keeps for ten minutes.
+A device keeps the address, the client id, the keep-alive and the session in a `const`, and adds the password it was provisioned with when it boots.
+
+{/* single-form: the settings are a constant built by methods, which have no macro form */}
+```rust reference="examples/device/device_config.rs#config"
+```
+
+### On the heap variant
+
+The same settings on a host with a heap, with the password the deployment hands the service.
 
 <Tabs groupId="api">
 <TabItem value="macros" label="Macros">

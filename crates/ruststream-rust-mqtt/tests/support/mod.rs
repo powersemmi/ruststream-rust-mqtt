@@ -3,7 +3,9 @@
 
 use core::pin::pin;
 use core::time::Duration;
+use std::collections::hash_map::RandomState;
 use std::env;
+use std::hash::{BuildHasher, Hasher};
 
 use embedded_io_adapters::tokio_1::FromTokio;
 use futures::StreamExt;
@@ -70,6 +72,11 @@ pub(crate) fn auth_stand() -> Option<(String, String)> {
          name the authenticated listener"
     );
     url.zip(password)
+}
+
+/// A password made up at run time, so no secret is written into the source.
+pub(crate) fn made_up_password() -> String {
+    RandomState::new().build_hasher().finish().to_string()
 }
 
 /// A client identifier no other test of this run uses.

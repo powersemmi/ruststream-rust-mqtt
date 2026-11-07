@@ -22,18 +22,19 @@ cargo add --dev ruststream-rust-mqtt --features testing
 
 ## Тест
 
-Тест запускает приложение с брокером, созданным через `MqttBroker::new`, публикует в него сообщение так, как это сделал бы другой клиент сервера, и проверяет, что получил обработчик и как завершилась доставка.
+Тест объявляет память брокера как `static`, как это делает плата, и запускает приложение с брокером, созданным через `MqttBroker::new` над ней.
+Он публикует в брокер сообщение так, как это сделал бы другой клиент сервера, и проверяет, что получил обработчик и как завершилась доставка.
 
 <Tabs groupId="api">
 <TabItem value="macros" label="Макросы">
 
-```rust reference="examples/mqtt_testing_embedded.rs#test"
+```rust reference="examples/device/device_testing.rs#test"
 ```
 
 </TabItem>
 <TabItem value="manual" label="Вручную">
 
-```rust reference="examples/manual/mqtt_testing_embedded.rs#test"
+```rust reference="examples/manual/device_testing.rs#test"
 ```
 
 </TabItem>
@@ -47,19 +48,21 @@ cargo add --dev ruststream-rust-mqtt --features testing
 <Tabs groupId="api">
 <TabItem value="macros" label="Макросы">
 
-```rust reference="examples/mqtt_testing_embedded.rs#advance"
+```rust reference="examples/device/device_testing.rs#advance"
 ```
 
 </TabItem>
 <TabItem value="manual" label="Вручную">
 
-```rust reference="examples/manual/mqtt_testing_embedded.rs#advance"
+```rust reference="examples/manual/device_testing.rs#advance"
 ```
 
 </TabItem>
 </Tabs>
 
 ## На compio
+
+Сервис на compio это вариант с кучей, и его тесту собственная память не нужна.
 
 <Tabs groupId="api">
 <TabItem value="macros" label="Макросы">

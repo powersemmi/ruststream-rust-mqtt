@@ -13,7 +13,7 @@ publish = false
 [workspace]
 
 [dependencies]
-ruststream-rust-mqtt = { path = "../../crates/ruststream-rust-mqtt", features = ["embassy"] }
+ruststream-rust-mqtt = { path = "../../crates/ruststream-rust-mqtt", features = ["embassy", "alloc"] }
 ruststream = { version = ">=0.8.0-rc.1, <0.9.0", default-features = false, features = ["embassy", "macros"] }
 embassy-executor = { version = "0.10", features = ["platform-cortex-m", "executor-thread"] }
 embassy-time = "0.5.1"

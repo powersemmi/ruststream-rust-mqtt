@@ -8,9 +8,9 @@
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use crate::link::Shared;
+use crate::heap::link::Shared;
+use crate::heap::queue::Queue;
 use crate::qos::Qos;
-use crate::queue::Queue;
 use crate::topic::matches;
 
 /// A member of a route: one subscription of the app.

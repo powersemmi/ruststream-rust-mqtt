@@ -8,18 +8,18 @@ use ruststream::{
     AddressedCopies, Broker, ConnectedBroker, DefaultPublish, DescribeServer, ServerSpec, Subscribe,
 };
 
-use crate::config::MqttConfig;
-use crate::error::MqttError;
+use crate::heap::config::MqttConfig;
+use crate::heap::error::MqttError;
 #[cfg(feature = "testing")]
-use crate::in_process::Bus;
+use crate::heap::in_process::Bus;
 use embassy_sync::signal::Signal;
 
-use crate::link::{Command, Link, Phase, Shared, SubscribeRequest};
-use crate::publisher::MqttPublish;
-use crate::queue::Queue;
-use crate::runner::MqttRunner;
-use crate::source::{MqttFilter, MqttTopic};
-use crate::subscriber::{Detach, MqttSubscriber};
+use crate::heap::link::{Command, Link, Phase, Shared, SubscribeRequest};
+use crate::heap::publisher::MqttPublish;
+use crate::heap::queue::Queue;
+use crate::heap::runner::MqttRunner;
+use crate::heap::source::{MqttFilter, MqttTopic};
+use crate::heap::subscriber::{Detach, MqttSubscriber};
 
 /// How many deliveries one subscription holds, waiting for its handler, before the runner stops
 /// reading the connection until the handler takes one.
@@ -121,7 +121,7 @@ impl Broker for MqttBroker {
         let mut this = self;
         #[cfg(feature = "compio")]
         if let Some(runner) = this.starts.take() {
-            crate::compio::start(runner);
+            crate::heap::compio::start(runner);
         }
         #[cfg(feature = "compio")]
         let link = this.link;

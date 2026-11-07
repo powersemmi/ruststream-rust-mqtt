@@ -8,9 +8,9 @@ use core::task::{Context, Poll};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::waitqueue::WakerRegistration;
 
-use crate::error::MqttError;
-use crate::link::RawLock;
-use crate::message::MqttMessage;
+use crate::heap::error::MqttError;
+use crate::heap::link::RawLock;
+use crate::heap::message::MqttMessage;
 
 /// The deliveries of one subscription, waiting for its stream.
 pub(crate) struct Queue {

@@ -33,7 +33,7 @@ compio = { workspace = true }
 # The lock of the broker's state on a host: the crate leaves the critical section to the program.
 critical-section = { version = "1.1", features = ["std"] }
 # The feeder is a raw client on a thread of its own, the one the sibling's benchmarks use.
-rumqttc = "0.25"
+rumqttc = { version = "0.25", default-features = false }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
 serde = { version = "1", features = ["derive"] }
 

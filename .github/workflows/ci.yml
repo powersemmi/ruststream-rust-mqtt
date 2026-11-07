@@ -141,14 +141,30 @@ jobs:
 
       - name: cargo clippy
         if: "!cancelled() && env.RUST_CHANGED == 'true'"
-        run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+        run: |
+          cargo clippy --locked --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features -- -D warnings
+          cargo clippy --locked -p ruststream-rust-mqtt-bench --all-targets -- -D warnings
+          cargo clippy --locked --manifest-path checks/noalloc/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --locked --manifest-path checks/bench-noalloc/Cargo.toml --all-targets -- -D warnings
 
+      - name: cargo fmt (device variant suites)
+        if: "!cancelled() && env.RUST_CHANGED == 'true'"
+        run: |
+          cargo fmt --manifest-path checks/noalloc/Cargo.toml -- --check
+          cargo fmt --manifest-path checks/bench-noalloc/Cargo.toml -- --check
+
+      # The benchmark package is left out of the all-features legs on purpose: it is built with the
+      # feature set a service ships, and the framework's harness feature is a compile error in it.
+      # Its own leg follows each of them, as in the justfile `check` recipe.
+      #
       # --no-dev-deps: a dev-dependency in scope masks a missing feature gate in the library.
       # It also rewrites the manifests while it runs, which is why it has no --locked and comes
       # after every step that needs the tree as checked in.
       - name: cargo hack check (each feature)
         if: "!cancelled() && env.RUST_CHANGED == 'true'"
-        run: cargo hack check --workspace --each-feature --no-dev-deps
+        # `testing` alone is not a feature set: the harness connects through a runner, so it is
+        # built with `compio` by every all-features leg.
+        run: cargo hack check --workspace --each-feature --exclude-features testing --no-dev-deps
 
       # Minimal versions is one chain: each step runs only when the one before it succeeded, since
       # a step on a graph that failed to resolve checks nothing.
@@ -159,20 +175,32 @@ jobs:
         if: "!cancelled() && env.RUST_CHANGED == 'true'"
         run: cargo +nightly update -Z minimal-versions
 
+      # A too-loose bound in a third-party manifest reached through this crate's own
+      # dependencies; drop it when the crate that declares it moves its floor.
+      #
+      # smoltcp 0.13.0 (reached through embassy-net) declares `bitflags = "1.0"` but uses the
+      # `__impl_bitflags` macro, added in 1.1.0.
+      - name: Pin dependencies whose declared bounds are too loose
+        id: minimal-pin
+        if: "!cancelled() && steps.minimal-resolve.outcome == 'success'"
+        run: cargo update -p bitflags@1.0.0 --precise 1.1.0
+
       # Minimum dependencies on the minimum compiler: the worst case a user can assemble.
       # Resolution above needs nightly, so only this step drops to the floor.
       # It builds into a target directory of its own, deleted afterwards, so its artifacts stay
       # out of the cache.
       - name: Build and test against minimal versions
         id: minimal-test
-        if: "!cancelled() && steps.minimal-resolve.outcome == 'success'"
+        if: "!cancelled() && steps.minimal-pin.outcome == 'success'"
         env:
           RUSTUP_TOOLCHAIN: "1.95"
           CARGO_TARGET_DIR: ${{ runner.temp }}/target-minimal
         run: |
-          cargo check --locked --workspace --all-targets --all-features
+          cargo check --locked --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features
+          cargo check --locked -p ruststream-rust-mqtt-bench --all-targets
           cargo test --locked --workspace --all-features --no-fail-fast --tests
           cargo test --locked --workspace --all-features --no-fail-fast --doc
+          cargo test --locked --manifest-path checks/noalloc/Cargo.toml --no-fail-fast
 
       - name: Delete the minimal versions build
         if: always()
@@ -214,7 +242,9 @@ jobs:
       - name: cargo doc
         env:
           RUSTDOCFLAGS: -D warnings
-        run: cargo doc --locked --workspace --all-features --no-deps
+        run: |
+          cargo doc --locked --workspace --all-features --no-deps
+          cargo doc --locked -p ruststream-rust-mqtt --features embassy,testing --no-deps
 
       - name: cargo check (no default features)
         run: cargo check --locked --workspace --no-default-features
@@ -237,7 +267,9 @@ jobs:
         env:
           RUSTUP_TOOLCHAIN: beta
           CARGO_TARGET_DIR: ${{ runner.temp }}/target-beta
-        run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+        run: |
+          cargo clippy --locked --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features -- -D warnings
+          cargo clippy --locked -p ruststream-rust-mqtt-bench --all-targets -- -D warnings
 
       - name: cargo check (no default features, beta)
         if: "!cancelled() && steps.stable.outcome == 'success'"
@@ -272,7 +304,8 @@ jobs:
           RUSTUP_TOOLCHAIN: "1.95"
           CARGO_TARGET_DIR: ${{ runner.temp }}/target-floor
         run: |
-          cargo check --locked --workspace --all-targets --all-features
+          cargo check --locked --workspace --exclude ruststream-rust-mqtt-bench --all-targets --all-features
+          cargo check --locked -p ruststream-rust-mqtt-bench --all-targets
           cargo test --locked --workspace --all-features --no-fail-fast --tests
           cargo test --locked --workspace --all-features --no-fail-fast --doc
 
@@ -281,11 +314,12 @@ jobs:
         run: rm -rf "$RUNNER_TEMP/target-floor"
 
   firmware:
-    name: Firmware (Cortex-M4F)
+    name: Firmware (Cortex-M)
     needs: changes
     if: ${{ needs.changes.outputs.rust == 'true' }}
-    # A device build of the broker's embassy surface: a binary that links for a Cortex-M4F with a
-    # heap, the runner as a task over embassy-net, and one subscriber.
+    # A device build of the broker's embassy surface: the heap variant links for a Cortex-M4F with
+    # a global allocator, and the device variant links for a Cortex-M4F and a Cortex-M0+ with none.
+    # Each has the runner as a task over embassy-net and one subscriber.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -295,7 +329,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: thumbv7em-none-eabihf
+          targets: thumbv7em-none-eabihf,thumbv6m-none-eabi
 
       - name: Install just
         uses: taiki-e/install-action@v2.87.31
@@ -344,7 +378,9 @@ jobs:
           # env block would leave this job green having asserted nothing. With this set, a
           # missing URL fails the suite instead of skipping it.
           RUSTSTREAM_REQUIRE_LIVE: "1"
-        run: cargo test --locked -p ruststream-rust-mqtt --all-features --tests -- --test-threads=1
+        run: |
+          cargo test --locked -p ruststream-rust-mqtt --all-features --tests -- --test-threads=1
+          cargo test --locked --manifest-path checks/noalloc/Cargo.toml --tests -- --test-threads=1
 
       - name: Cleanup
         if: always()

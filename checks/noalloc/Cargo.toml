@@ -1,0 +1,94 @@
+# The broker's device variant built from the crate's own sources without `alloc`, so its in-crate
+# tests, its doc examples and the suites below run in the build a device without a heap gets: the
+# crate's own dev-dependencies turn `alloc` on. A workspace of its own for the same reason: a
+# member of the main workspace would unify `alloc` on through its neighbours.
+[workspace]
+resolver = "3"
+
+[package]
+name = "ruststream-rust-mqtt-noalloc"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.95"
+license = "Apache-2.0"
+repository = "https://github.com/powersemmi/ruststream-rust-mqtt"
+description = "The device variant of ruststream-rust-mqtt, built without `alloc` from the crate's own sources so its tests and doc examples run."
+publish = false
+build = "../../crates/ruststream-rust-mqtt/build.rs"
+autotests = false
+
+[lib]
+name = "ruststream_rust_mqtt"
+path = "../../crates/ruststream-rust-mqtt/src/lib.rs"
+
+[features]
+default = ["embassy", "testing"]
+embassy = ["ruststream/embassy", "dep:embassy-net", "dep:embassy-time"]
+testing = ["ruststream/testing", "dep:assert_no_alloc"]
+
+[dependencies]
+ruststream = { version = ">=0.8.0-rc.1, <0.9.0", default-features = false }
+ruststream-core = { version = ">=0.8.0-rc.1, <0.9.0", default-features = false }
+zzq-proto = { version = "0.6", default-features = false }
+embedded-io-async = "0.7"
+embassy-sync = "0.8"
+embassy-futures = "0.1.2"
+heapless = { version = "0.9", default-features = false }
+futures-core = { version = "0.3", default-features = false }
+thiserror = { version = "2", default-features = false }
+embassy-net = { version = "0.9", features = ["tcp", "dns", "proto-ipv4", "medium-ip"], optional = true }
+embassy-time = { version = "0.5.1", optional = true }
+assert_no_alloc = { version = "1.1.2", optional = true }
+
+[dev-dependencies]
+ruststream = { version = ">=0.8.0-rc.1, <0.9.0", default-features = false, features = ["testing", "macros", "embassy"] }
+ruststream-conformance = { version = ">=0.8.0-rc.1, <0.9.0", default-features = false }
+static_cell = "2"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time", "net", "test-util"] }
+# The live suites run the runner on tokio, over a TCP stream the adapter lends embedded-io.
+embedded-io-adapters = { version = "0.7", features = ["tokio-1"] }
+# The lock of the broker's state on a host.
+critical-section = { version = "1.1", features = ["std"] }
+futures = "0.3"
+# The task `#[ruststream::app(runtime = embassy)]` generates, on the host the tests run on.
+embassy-executor = { version = "0.10", features = ["platform-std", "executor-thread"] }
+
+# The sources are the crate's, and name features this build never has.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("alloc", "compio"))', 'cfg(ruststream_alloc)'] }
+
+[[test]]
+name = "suite"
+path = "tests/main.rs"
+
+# The device examples the site shows, built without `alloc` from the crate's own example files;
+# each carries its tests, which `cargo test` runs.
+[[example]]
+name = "device_service"
+path = "../../crates/ruststream-rust-mqtt/examples/device/device_service.rs"
+test = true
+
+[[example]]
+name = "device_config"
+path = "../../crates/ruststream-rust-mqtt/examples/device/device_config.rs"
+test = true
+
+[[example]]
+name = "device_memory"
+path = "../../crates/ruststream-rust-mqtt/examples/device/device_memory.rs"
+test = true
+
+[[example]]
+name = "device_testing"
+path = "../../crates/ruststream-rust-mqtt/examples/device/device_testing.rs"
+test = true
+
+[[example]]
+name = "manual_device_service"
+path = "../../crates/ruststream-rust-mqtt/examples/manual/device_service.rs"
+test = true
+
+[[example]]
+name = "manual_device_testing"
+path = "../../crates/ruststream-rust-mqtt/examples/manual/device_testing.rs"
+test = true
