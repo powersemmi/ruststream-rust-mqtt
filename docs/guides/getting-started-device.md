@@ -73,5 +73,5 @@ The socket buffers live in the runner's task, and their size is the board's choi
 </Tabs>
 
 The defaults of `MqttState` are four deliveries of up to 1 KiB and eight subscriptions.
-The address, the client id, the credentials and the session are the settings of [`MqttConfig`](../components/broker/configuration.md), a `const` of the firmware.
+The address, the client id, the credentials and the session are the settings of [`MqttConfig`](../components/broker/configuration.md).
 Before the firmware reaches a board, [test the service on the host](./testing.md): the test declares its own memory and needs no runner.

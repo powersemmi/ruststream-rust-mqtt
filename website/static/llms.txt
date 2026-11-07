@@ -17,7 +17,7 @@ This site holds the guides, one page per component and the architecture of the c
 
 - [Components](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/): the parts of the crate an MQTT service uses, one page each
 - [MqttBroker](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/): the broker and its runner, the three types of its lifecycle, the two variants and the features of the crate
-- [MqttConfig](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/configuration/): the address, the client id, the keep-alive, the credentials and the persistent session, a `const` on a device
+- [MqttConfig](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/configuration/): the address, the client id, the keep-alive, the credentials and the persistent session; on a device a `const` plus the password added at boot
 - [Network](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/network/): the link the runner connects over, `EmbassyNetwork`, `CompioNetwork` and a network of the board's own
 - [MqttState](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/memory/): the memory of a device broker, its three numbers (deliveries held at once, the largest packet, open subscriptions) and the back-pressure when every buffer is held
 - [MqttTopic](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/subscriptions/): one topic with no wildcard, which answers for its own retry copies

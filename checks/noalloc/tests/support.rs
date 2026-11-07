@@ -3,7 +3,9 @@
 
 use core::pin::pin;
 use core::time::Duration;
+use std::collections::hash_map::RandomState;
 use std::env;
+use std::hash::{BuildHasher, Hasher};
 
 use embedded_io_adapters::tokio_1::FromTokio;
 use futures::StreamExt;
@@ -56,6 +58,11 @@ pub(crate) fn stand() -> Option<String> {
 /// A text the test keeps for the rest of the process, as a firmware's literals live.
 pub(crate) fn leak(text: String) -> &'static str {
     Box::leak(text.into_boxed_str())
+}
+
+/// A password made up at run time, so no secret is written into the source.
+pub(crate) fn made_up_password() -> String {
+    RandomState::new().build_hasher().finish().to_string()
 }
 
 /// The stand's authenticated listener and the password of its user `tester`, or `None` where no

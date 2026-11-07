@@ -11,9 +11,9 @@ const DEFAULT_KEEP_ALIVE: Duration = Duration::from_secs(60);
 /// The connection settings of an [`MqttBroker`](crate::MqttBroker): where it connects and as
 /// whom.
 ///
-/// Every text is a literal of the firmware, so the settings hold no buffer of their own. Building
-/// them performs no I/O. The address is read when the broker connects, so a value the broker
-/// cannot connect to is reported by `connect`.
+/// Every text is a `&'static str`, so the settings hold no buffer of their own. Building them
+/// performs no I/O. The address is read when the broker connects, so a value the broker cannot
+/// connect to is reported by `connect`.
 ///
 /// # Examples
 ///

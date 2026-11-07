@@ -10,8 +10,8 @@ use ruststream::{
 use ruststream_rust_mqtt::{MqttConfig, MqttError, MqttPublish, Qos};
 
 use crate::support::{
-    auth_stand, broker_with, connect, leak, live_broker, next, open, publish, publisher_of, stand,
-    topic, unique_client_id,
+    auth_stand, broker_with, connect, leak, live_broker, made_up_password, next, open, publish,
+    publisher_of, stand, topic, unique_client_id,
 };
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -28,7 +28,7 @@ async fn the_right_credentials_connect_and_wrong_ones_are_refused() {
 
     let bad = MqttConfig::new(url)
         .client_id(unique_client_id("auth-bad"))
-        .credentials("tester", "not the password");
+        .credentials("tester", leak(made_up_password()));
     let refused = broker_with::<4, 1024, 8>(bad).connect().await;
     assert!(
         matches!(refused, Err(MqttError::Refused { code: 0x87, .. })),

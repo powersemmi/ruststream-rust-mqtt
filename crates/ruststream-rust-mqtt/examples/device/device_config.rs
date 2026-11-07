@@ -1,5 +1,6 @@
 //! The connection settings of a device: a `const` the firmware keeps, with the address, the client
-//! identifier, the keep-alive, the credentials and the session the server keeps.
+//! identifier, the keep-alive and the session the server keeps, and the password the plant
+//! provisioned into the device, which joins them when the firmware boots.
 //!
 //! ```text
 //! cd checks/noalloc && cargo test --example device_config
@@ -16,14 +17,19 @@ use ruststream::Deserialized;
 use ruststream_rust_mqtt::prelude::*;
 
 // --8<-- [start:config]
-/// The server on the plant network, as this valve. The texts are literals of the firmware, so
+/// The server on the plant network, as this valve. These texts are literals of the firmware, so
 /// the settings are a constant. The server keeps the session for ten minutes after the
 /// connection ends and redelivers what the valve had not acknowledged.
 const VALVE: MqttConfig = MqttConfig::new("mqtt://192.168.1.10:1883")
     .client_id("valve-1")
     .keep_alive(Duration::from_secs(30))
-    .credentials("valve-1", "secret")
     .persistent_session(Duration::from_secs(600));
+
+/// The settings with the password the plant provisioned into this valve, which the firmware
+/// reads when it boots: a secret is not a literal of the firmware.
+const fn provisioned(password: &'static str) -> MqttConfig {
+    VALVE.credentials("valve-1", password)
+}
 // --8<-- [end:config]
 
 /// A command as the controller sends its bytes.
@@ -48,6 +54,9 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+
     use embassy_futures::block_on;
     use ruststream::testing::embedded::TestApp;
     use ruststream::{Outgoing, Serialized};
@@ -60,11 +69,20 @@ mod tests {
     #[derive(Outgoing, Serialized)]
     struct Sent(&'static [u8]);
 
+    /// A password made up at run time, so no secret is written into the source.
+    fn made_up_password() -> &'static str {
+        RandomState::new()
+            .build_hasher()
+            .finish()
+            .to_string()
+            .leak()
+    }
+
     #[test]
     fn the_app_starts_with_the_settings_of_the_valve() {
         static MEMORY: ConstStaticCell<MqttState> = ConstStaticCell::new(MqttState::new());
         block_on(async {
-            let (broker, _runner) = MqttBroker::new(MEMORY.take(), VALVE);
+            let (broker, _runner) = MqttBroker::new(MEMORY.take(), provisioned(made_up_password()));
             let tb = TestApp::start(app(broker)).await.expect("the app starts");
             let valve = tb.broker::<MqttBroker>();
             valve
@@ -95,8 +113,9 @@ mod tests {
 
     #[test]
     fn the_password_stays_out_of_the_debug_form() {
-        let shown = format!("{VALVE:?}");
+        let password = made_up_password();
+        let shown = format!("{:?}", provisioned(password));
         assert!(shown.contains("valve-1"));
-        assert!(!shown.contains("secret"));
+        assert!(!shown.contains(password));
     }
 }

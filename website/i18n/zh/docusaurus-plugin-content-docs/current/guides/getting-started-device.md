@@ -73,5 +73,5 @@ Runner 持有连接：应用连接 Broker 时由它打开连接，所有读、�
 </Tabs>
 
 `MqttState` 的默认值是四条投递，每条最多 1 KiB，以及八个订阅。
-地址、客户端 ID、凭据和会话是 [`MqttConfig`](../components/broker/configuration.md) 的设置，它是固件的 `const`。
+地址、客户端 ID、凭据和会话是 [`MqttConfig`](../components/broker/configuration.md) 的设置。
 在固件到达开发板之前，请先[在主机上测试服务](./testing.md)：测试声明自己的内存，不需要 runner。
