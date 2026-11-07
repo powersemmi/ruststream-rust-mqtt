@@ -9,7 +9,7 @@ use embassy_net::dns::DnsQueryType;
 use embassy_net::tcp::{ConnectError, TcpSocket};
 use embassy_net::{IpAddress, IpEndpoint, Stack};
 
-use crate::runner::Network;
+use crate::network::Network;
 
 /// The runner's network on a device: a TCP socket on an embassy-net stack, over buffers the
 /// board owns.

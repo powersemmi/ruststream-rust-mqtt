@@ -854,6 +854,7 @@ dependencies = [
  "ruststream",
  "ruststream-core",
  "thiserror",
+ "zzq-proto",
 ]
 
 [[package]]
@@ -1274,4 +1275,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
 dependencies = [
  "windows-link",
+]
+
+[[package]]
+name = "zzq-proto"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cec5cf18f3f25df500fe9f09fca83982806e231724dedda37cd998bf042708db"
+dependencies = [
+ "thiserror",
 ]

@@ -26,6 +26,7 @@ embassy-futures = "0.1.2"
 embassy-net = { version = "0.9", features = ["tcp", "dns", "proto-ipv4", "medium-ip"] }
 embassy-time = "0.5.1"
 heapless = { version = "0.9", default-features = false }
+zzq-proto = { version = "0.6", default-features = false }
 futures-core = { version = "0.3", default-features = false }
 thiserror = { version = "2", default-features = false }
 compio = { version = "=0.20.0-beta.1", features = ["runtime", "net", "time", "io"] }

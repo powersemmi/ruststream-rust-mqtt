@@ -25,14 +25,15 @@ struct Command {
 }
 
 // --8<-- [start:config]
-/// The server on the plant network, as this valve. The server keeps the session for ten
-/// minutes after the connection ends and redelivers what the valve had not acknowledged.
-fn board() -> (MqttBroker, MqttRunner) {
+/// The server on the plant network, as this valve, with the password the deployment hands the
+/// service when it starts. The server keeps the session for ten minutes after the connection
+/// ends and redelivers what the valve had not acknowledged.
+fn board(password: String) -> (MqttBroker, MqttRunner) {
     MqttBroker::new(
         MqttConfig::new("mqtt://192.168.1.10")
             .client_id("valve-1")
             .keep_alive(Duration::from_secs(30))
-            .credentials("valve-1", "secret")
+            .credentials("valve-1", password)
             .persistent_session(Duration::from_secs(600)),
     )
 }
@@ -53,17 +54,24 @@ fn main() {}
 
 #[cfg(test)]
 mod tests {
+    use std::collections::hash_map::RandomState;
     use std::error::Error;
+    use std::hash::{BuildHasher, Hasher};
 
     use embassy_futures::block_on;
     use ruststream::testing::embedded::TestApp;
 
     use super::*;
 
+    /// A password made up at run time, so no secret is written into the source.
+    fn made_up_password() -> String {
+        RandomState::new().build_hasher().finish().to_string()
+    }
+
     #[test]
     fn the_app_starts_with_the_boards_settings() -> Result<(), Box<dyn Error>> {
         block_on(async {
-            let (broker, _runner) = board();
+            let (broker, _runner) = board(made_up_password());
             let tb = TestApp::start(app(broker)).await?;
             tb.broker::<MqttBroker>()
                 .message(&Command { open: true })

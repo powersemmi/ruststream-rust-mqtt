@@ -1,0 +1,70 @@
+# The code-cost benchmarks of the device variant, built without `alloc` from the crate's own
+# sources and set beside the heap variant's on compio. A workspace of its own for the reason
+# `checks/noalloc` is one: a member of the main workspace would unify `alloc` on through its
+# neighbours. Never built with the framework's `testing` feature: a benchmark measures what ships.
+[workspace]
+resolver = "3"
+
+[package]
+name = "ruststream-rust-mqtt-bench-noalloc"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.95"
+license = "Apache-2.0"
+repository = "https://github.com/powersemmi/ruststream-rust-mqtt"
+description = "The code-cost benchmarks of the device variant of ruststream-rust-mqtt. Never published."
+publish = false
+build = "../../crates/ruststream-rust-mqtt/build.rs"
+autotests = false
+autobenches = false
+
+[lib]
+name = "ruststream_rust_mqtt"
+path = "../../crates/ruststream-rust-mqtt/src/lib.rs"
+bench = false
+
+[features]
+default = ["embassy"]
+embassy = ["ruststream/embassy", "dep:embassy-net", "dep:embassy-time"]
+
+[dependencies]
+ruststream = { version = ">=0.8.0-rc.1, <0.9.0", default-features = false, features = ["macros", "embassy"] }
+ruststream-core = { version = ">=0.8.0-rc.1, <0.9.0", default-features = false }
+zzq-proto = { version = "0.6", default-features = false }
+embedded-io-async = "0.7"
+embassy-sync = "0.8"
+embassy-futures = "0.1.2"
+heapless = { version = "0.9", default-features = false }
+futures-core = { version = "0.3", default-features = false }
+thiserror = { version = "2", default-features = false }
+embassy-net = { version = "0.9", features = ["tcp", "dns", "proto-ipv4", "medium-ip"], optional = true }
+embassy-time = { version = "0.5.1", optional = true }
+
+[dev-dependencies]
+gungraun = "=0.20.0"
+tokio = { version = "1", features = ["rt", "macros", "time", "net", "sync"] }
+# The runner runs on tokio, over a TCP stream the adapter lends embedded-io.
+embedded-io-adapters = { version = "0.7", features = ["tokio-1"] }
+critical-section = { version = "1.1", features = ["std"] }
+static_cell = "2"
+embassy-executor = { version = "0.10", features = ["platform-std", "executor-thread"] }
+# The feeder is a raw client on a thread of its own, the one the heap variant's benchmarks use.
+rumqttc = { version = "0.25", default-features = false }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("alloc", "compio", "testing"))', 'cfg(ruststream_alloc)'] }
+
+[profile.release]
+lto = "fat"
+
+[profile.bench]
+inherits = "release"
+debug = "line-tables-only"
+
+[[bench]]
+name = "consume"
+harness = false
+
+[[bench]]
+name = "reply"
+harness = false

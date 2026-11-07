@@ -10,7 +10,7 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::fmt;
-use core::future::{Future, poll_fn};
+use core::future::poll_fn;
 use core::mem;
 use core::num::NonZero;
 use core::pin::pin;
@@ -32,11 +32,12 @@ use rust_mqtt::types::{
 };
 use ruststream::HeaderMap;
 
-use crate::error::MqttError;
-use crate::link::{Command, Link, Phase, Shared, Staged, SubscribeRequest};
-use crate::message::{Acker, Body, MqttMessage};
+use crate::heap::error::MqttError;
+use crate::heap::link::{Command, Link, Phase, Shared, Staged, SubscribeRequest};
+use crate::heap::message::{Acker, Body, MqttMessage};
+use crate::heap::queue::Queue;
+use crate::network::Network;
 use crate::qos::Qos;
-use crate::queue::Queue;
 use crate::topic::is_mqtt_text;
 
 /// How many subscribes wait for the server's answer at once.
@@ -65,75 +66,6 @@ type Session<Stream> = Client<
     0,
     0,
 >;
-
-/// The connection a runner opens: a TCP stream to the server, and the clock the keep-alive
-/// reads.
-///
-/// The crate implements it over embassy-net (`EmbassyNetwork`, feature `embassy`) and over compio
-/// (feature `compio`). A board with another link (a TLS session, a modem's socket) implements it
-/// for that link.
-///
-/// A read of the stream must be cancel-safe: the runner stops waiting for the server's next
-/// packet when a handle sends it work, and picks the read up again after.
-///
-/// # Examples
-///
-/// ```
-/// use core::time::Duration;
-///
-/// use ruststream_rust_mqtt::Network;
-///
-/// /// A board's network: a socket it already holds, and the board's own timer.
-/// struct Board<Socket> {
-///     socket: Option<Socket>,
-/// }
-///
-/// impl<Socket> Network for Board<Socket>
-/// where
-///     Socket: embedded_io_async::Read + embedded_io_async::Write,
-/// {
-///     type Stream<'net>
-///         = Socket
-///     where
-///         Self: 'net;
-///     type Error = &'static str;
-///
-///     async fn connect(&mut self, _host: &str, _port: u16) -> Result<Socket, &'static str> {
-///         self.socket.take().ok_or("the board has one socket")
-///     }
-///
-///     async fn sleep(duration: Duration) {
-///         let _ = duration;
-///         core::future::pending::<()>().await;
-///     }
-/// }
-/// ```
-pub trait Network {
-    /// The stream the client reads and writes, which may borrow the network's buffers.
-    type Stream<'net>: Read + Write
-    where
-        Self: 'net;
-    /// What a failed connection reports.
-    type Error: fmt::Debug;
-
-    /// Opens a stream to `host` at `port`.
-    fn connect(
-        &mut self,
-        host: &str,
-        port: u16,
-    ) -> impl Future<Output = Result<Self::Stream<'_>, Self::Error>>;
-
-    /// Completes after `duration`, on the clock of the runtime the runner runs on.
-    fn sleep(duration: Duration) -> impl Future<Output = ()>;
-
-    /// Completes once what was written to `stream` has left, so the DISCONNECT the runner wrote
-    /// last reaches the server. The default completes at once: a stream whose flush already
-    /// waits for its bytes needs nothing more.
-    fn close(stream: Self::Stream<'_>) -> impl Future<Output = ()> {
-        drop(stream);
-        core::future::ready(())
-    }
-}
 
 /// The task that owns an [`MqttBroker`](crate::MqttBroker)'s connection.
 ///
@@ -534,7 +466,7 @@ fn release_held(link: &Shared<Link>, state: &mut State, request: &SubscribeReque
     if state.held.is_empty() {
         return;
     }
-    let filter = crate::routes::plain_filter(&request.wire_filter);
+    let filter = crate::heap::routes::plain_filter(&request.wire_filter);
     let held = mem::take(&mut state.held);
     for message in held {
         if !crate::topic::matches(message.topic(), filter) {

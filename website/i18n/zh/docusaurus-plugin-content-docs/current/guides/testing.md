@@ -22,18 +22,19 @@ cargo add --dev ruststream-rust-mqtt --features testing
 
 ## 测试
 
-测试用 `MqttBroker::new` 构建的 Broker 启动应用，像服务器的另一个客户端那样向它发布消息，然后断言处理器收到了什么，以及这次投递如何结算。
+测试像开发板一样，把 Broker 的内存声明为 `static`，并用 `MqttBroker::new` 在其上构建 Broker，再启动应用。
+测试像服务器的另一个客户端那样向它发布消息，然后断言处理器收到了什么，以及这次投递如何结算。
 
 <Tabs groupId="api">
 <TabItem value="macros" label="宏">
 
-```rust reference="examples/mqtt_testing_embedded.rs#test"
+```rust reference="examples/device/device_testing.rs#test"
 ```
 
 </TabItem>
 <TabItem value="manual" label="手写">
 
-```rust reference="examples/manual/mqtt_testing_embedded.rs#test"
+```rust reference="examples/manual/device_testing.rs#test"
 ```
 
 </TabItem>
@@ -47,19 +48,21 @@ cargo add --dev ruststream-rust-mqtt --features testing
 <Tabs groupId="api">
 <TabItem value="macros" label="宏">
 
-```rust reference="examples/mqtt_testing_embedded.rs#advance"
+```rust reference="examples/device/device_testing.rs#advance"
 ```
 
 </TabItem>
 <TabItem value="manual" label="手写">
 
-```rust reference="examples/manual/mqtt_testing_embedded.rs#advance"
+```rust reference="examples/manual/device_testing.rs#advance"
 ```
 
 </TabItem>
 </Tabs>
 
 ## 在 compio 上
+
+compio 服务是堆变体，它的测试不需要自己的内存。
 
 <Tabs groupId="api">
 <TabItem value="macros" label="宏">

@@ -1,24 +1,25 @@
 # ruststream-rust-mqtt
 
-> `ruststream-rust-mqtt` is the MQTT 5 broker crate for RustStream, a Rust framework for services that subscribe to message brokers and publish to them. It is built on the `rust-mqtt` client and serves two runtimes of RustStream: embassy, for a device that spawns the connection's runner as a task over its network stack, and compio, for a host where the broker starts the runner itself.
+> `ruststream-rust-mqtt` is the MQTT 5 broker crate for RustStream, a Rust framework for services that subscribe to message brokers and publish to them. It has two variants. The device variant needs no heap: the board declares the broker's memory, an `MqttState`, as a `static`, a delivery borrows its payload from a receive buffer, and the runner is a task over the board's network stack on embassy. The heap variant (feature `alloc`, implied by `compio`) runs over the `rust-mqtt` client, and on a compio host the broker starts the runner itself.
 
-A subscription is a descriptor: `MqttTopic` for one topic, `MqttFilter` for a topic filter with wildcards, each with its own quality of service and share group. A service imports `ruststream_rust_mqtt::prelude::*`; a body that changes the quality of service or the retain flag of one message takes a step from `MqttPublishSteps`. `MqttBroker::new(config)` returns the broker with its `MqttRunner`, which owns the connection and has to run for the broker to connect. The in-process transport behind the `testing` feature lets the embedded and the compio `TestApp` run the production app without a server.
+A subscription is a descriptor: `MqttTopic` for one topic, `MqttFilter` for a topic filter with wildcards, each with its own quality of service and share group. A service imports `ruststream_rust_mqtt::prelude::*`; a body that changes the quality of service or the retain flag of one message takes a step from `MqttPublishSteps`. On a device `MqttBroker::new(state, config)` returns the broker with its `MqttRunner` (the heap variant takes the config alone), and the runner owns the connection and has to run for the broker to connect. The in-process transport behind the `testing` feature lets the embedded and the compio `TestApp` run the production app without a server.
 
 This site holds the guides, one page per component and the architecture of the crate; the API reference is on docs.rs, and the framework itself is documented on the RustStream site.
 
 ## Guides
 
 - [Guides](https://powersemmi.github.io/ruststream-rust-mqtt/latest/): what the crate is and where to start
-- [Getting started on a device](https://powersemmi.github.io/ruststream-rust-mqtt/latest/guides/getting-started-device/): the handler and the app, the runner task over the board's network stack, and the `start` that spawns both
-- [Getting started on a compio host](https://powersemmi.github.io/ruststream-rust-mqtt/latest/guides/getting-started-compio/): `MqttBroker::compio`, which starts the runner on the core that connects the broker
+- [Getting started on a device](https://powersemmi.github.io/ruststream-rust-mqtt/latest/guides/getting-started-device/): the device variant without a heap: the handler that borrows its payload, the broker's memory as a `static`, the runner task and the `start` that spawns both
+- [Getting started on a compio host](https://powersemmi.github.io/ruststream-rust-mqtt/latest/guides/getting-started-compio/): the heap variant, `MqttBroker::compio`, which starts the runner on the core that connects the broker, and a device that has a heap
 - [Testing a device service](https://powersemmi.github.io/ruststream-rust-mqtt/latest/guides/testing/): the embedded and the compio `TestApp` on the production app, time moved by `advance`
 
 ## Components
 
 - [Components](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/): the parts of the crate an MQTT service uses, one page each
-- [MqttBroker](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/): the broker and its runner, the three types of its lifecycle and the features of the crate
-- [MqttConfig](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/configuration/): the address, the client id, the keep-alive, the credentials and the persistent session
+- [MqttBroker](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/): the broker and its runner, the three types of its lifecycle, the two variants and the features of the crate
+- [MqttConfig](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/configuration/): the address, the client id, the keep-alive, the credentials and the persistent session; on a device a `const` plus the password added at boot
 - [Network](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/network/): the link the runner connects over, `EmbassyNetwork`, `CompioNetwork` and a network of the board's own
+- [MqttState](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/broker/memory/): the memory of a device broker, its three numbers (deliveries held at once, the largest packet, open subscriptions) and the back-pressure when every buffer is held
 - [MqttTopic](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/subscriptions/): one topic with no wildcard, which answers for its own retry copies
 - [MqttFilter](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/subscriptions/mqtt-filter/): a topic filter with the `+` and `#` wildcards
 - [Qos](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/subscriptions/qos/): at most once, at least once or exactly once, and the level a delivery arrives at
@@ -31,15 +32,15 @@ This site holds the guides, one page per component and the architecture of the c
 - [MqttPublishSteps](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/publishing/steps/): the `qos` and `retain` steps of one message
 - [Retained messages](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/publishing/retained/): the last message of a topic, kept by the server
 - [Headers and properties](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/publishing/headers/): typed headers as MQTT 5 user properties
-- [The embedded TestApp](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/testing/): the embedded `TestApp`, the in-process server and its limits
+- [The embedded TestApp](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/testing/): the embedded `TestApp` over a memory the test declares, the in-process server and its limits
 - [Testing a compio service](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/testing/compio/): the compio `TestApp`
 - [The live stand](https://powersemmi.github.io/ruststream-rust-mqtt/latest/components/testing/live/): a service against a real server, started by `just test-brokers`
 
 ## Architecture
 
 - [Architecture](https://powersemmi.github.io/ruststream-rust-mqtt/latest/architecture/): where the crate sits between the MQTT broker and the RustStream runtime
-- [The runner and the handles](https://powersemmi.github.io/ruststream-rust-mqtt/latest/architecture/runner/): one task owns the connection, and the handles reach it through storage that exists from the start
-- [What a delivery and a publish cost](https://powersemmi.github.io/ruststream-rust-mqtt/latest/architecture/cost/): the heap buffers of a delivery and the staging slot of a publish
+- [The runner and the handles](https://powersemmi.github.io/ruststream-rust-mqtt/latest/architecture/runner/): one task owns the connection, and the handles reach it through the broker's memory, which exists from the start; a device reads each packet into a receive buffer
+- [What a delivery and a publish cost](https://powersemmi.github.io/ruststream-rust-mqtt/latest/architecture/cost/): a delivery that borrows its receive buffer and a publish encoded into a send buffer on a device, and the heap buffers of the heap variant
 
 ## Reference
 

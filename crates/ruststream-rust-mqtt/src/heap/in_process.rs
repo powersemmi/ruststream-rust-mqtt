@@ -26,16 +26,16 @@ use embassy_sync::blocking_mutex::Mutex;
 use ruststream::testing::{Coordinator, InProcess, TestableBroker};
 use ruststream::{Bytes, HeaderMap, OutgoingMessage, RawMessage};
 
-use crate::broker::{Backend, ConnectedMqttBroker, DELIVERIES_PER_SUBSCRIPTION, MqttBroker};
-use crate::error::MqttError;
-use crate::link::{RawLock, Shared};
-use crate::message::{Acker, Body, MqttMessage};
-use crate::publisher::{check_headers, check_topic};
+use crate::heap::broker::{Backend, ConnectedMqttBroker, DELIVERIES_PER_SUBSCRIPTION, MqttBroker};
+use crate::heap::error::MqttError;
+use crate::heap::link::{RawLock, Shared};
+use crate::heap::message::{Acker, Body, MqttMessage};
+use crate::heap::publisher::{check_headers, check_topic};
+use crate::heap::queue::Queue;
+use crate::heap::routes::{Member, Routes};
+use crate::heap::source::MqttFilter;
+use crate::heap::subscriber::{Detach, MqttSubscriber};
 use crate::qos::Qos;
-use crate::queue::Queue;
-use crate::routes::{Member, Routes};
-use crate::source::MqttFilter;
-use crate::subscriber::{Detach, MqttSubscriber};
 use crate::topic::matches;
 
 /// The harness's count of one delivery in flight: counted when it is made, released when it is
@@ -343,8 +343,8 @@ mod tests {
     };
 
     use super::*;
-    use crate::publisher::MqttPublish;
-    use crate::source::MqttTopic;
+    use crate::heap::publisher::MqttPublish;
+    use crate::heap::source::MqttTopic;
     use crate::{MqttConfig, MqttPublisher};
 
     async fn connected() -> ConnectedMqttBroker {

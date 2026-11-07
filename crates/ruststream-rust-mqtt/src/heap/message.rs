@@ -10,15 +10,12 @@ use rust_mqtt::types::{PacketIdentifier, TopicName};
 use ruststream::Bytes;
 use ruststream::{AckError, HeaderMap, IncomingMessage, Partitioned, Settle};
 
-use crate::error::MqttError;
+use crate::PARTITION_KEY_HEADER;
+use crate::heap::error::MqttError;
 #[cfg(feature = "testing")]
-use crate::in_process::InFlight;
-use crate::link::{Command, Link, Shared};
+use crate::heap::in_process::InFlight;
+use crate::heap::link::{Command, Link, Shared};
 use crate::qos::Qos;
-
-/// The header a delivery's partition key is read from: a publisher that wants per-key ordering
-/// in keyed workers sets it as a user property.
-pub const PARTITION_KEY_HEADER: &str = "partition-key";
 
 /// The topic and the payload of a delivery, as its transport handed them over.
 pub(crate) enum Body {
@@ -41,7 +38,7 @@ pub(crate) enum Acker {
     },
     /// The in-process transport, which only needs the session to be open.
     #[cfg(feature = "testing")]
-    Local(Shared<crate::in_process::Bus>),
+    Local(Shared<crate::heap::in_process::Bus>),
 }
 
 /// One delivery of an MQTT subscription.

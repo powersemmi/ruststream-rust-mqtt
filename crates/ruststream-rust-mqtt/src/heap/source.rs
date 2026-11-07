@@ -18,10 +18,10 @@ use ruststream::{
     SubscriptionSource,
 };
 
-use crate::broker::ConnectedMqttBroker;
-use crate::error::MqttError;
+use crate::heap::broker::ConnectedMqttBroker;
+use crate::heap::error::MqttError;
+use crate::heap::subscriber::MqttSubscriber;
 use crate::qos::Qos;
-use crate::subscriber::MqttSubscriber;
 use crate::topic::{is_mqtt_text, is_topic_filter, is_topic_name};
 
 /// Refuses a share group no server accepts, before any I/O.
