@@ -94,7 +94,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Install cargo-deny
-        uses: taiki-e/install-action@v2.90.1
+        uses: taiki-e/install-action@v2.90.2
         with:
           tool: cargo-deny
 
@@ -131,7 +131,7 @@ jobs:
 
       - name: Install cargo-hack
         if: "!cancelled() && env.RUST_CHANGED == 'true'"
-        uses: taiki-e/install-action@v2.90.1
+        uses: taiki-e/install-action@v2.90.2
         with:
           tool: cargo-hack
 
@@ -332,7 +332,7 @@ jobs:
           targets: thumbv7em-none-eabihf,thumbv6m-none-eabi
 
       - name: Install just
-        uses: taiki-e/install-action@v2.90.1
+        uses: taiki-e/install-action@v2.90.2
         with:
           tool: just
 
